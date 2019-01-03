@@ -1,0 +1,26 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;
+; test2.in
+;
+; Disassembled by mfc6502
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+*=$2000
+
+LDY #$DF
+STY $2304
+LDY #$00
+LDY $23
+LDA #$34
+ROL
+TAX
+LDA #$90
+ADC #$10
+ORA #$01
+PHA
+LDA #$00
+PLA
+SEC
+SED
+LDA #$10
+LDA $20
+BNE 07D5
