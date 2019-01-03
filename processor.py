@@ -148,6 +148,24 @@ class Processor(MFCBase):
 
         return address
 
+    def calculateindexedaddress(self, offset):
+
+        address = self._memory.readbyte(self.pc + offset) + (0x100 * self._memory.readbyte((self.pc + offset) + 1))
+
+        # Check to make sure it is a valid address.
+        self.validateaddress(address)
+
+        return address
+
+    def calculateindirectaddress(self, offset):
+
+        address = self._memory.readbyte(self.pc) + (0x100 * self._memory.readbyte(self.pc + 1)) + offset
+
+        # Check to make sure it is a valid address.
+        self.validateaddress(address)
+
+        return address
+
     def validateaddress(self, address):
         if address < 0 or address > self.maxmemory:
             print("Invalid address: ${0:04X}".format(address))
