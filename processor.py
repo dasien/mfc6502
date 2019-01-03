@@ -140,7 +140,7 @@ class Processor(MFCBase):
             address = self._memory.readbyte(self.pc + offset) & 0xFF
 
         else:
-
+            # Calculate the correct address.
             address = self._memory.readbyte(self.pc) + (0x100 * self._memory.readbyte(self.pc + 1)) + offset
 
         # Check to make sure it is a valid address.
@@ -381,6 +381,44 @@ class Processor(MFCBase):
         self.pc += 2
         self.cy += 4
 
+    def handleADCindexedindirect(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, (self.pc + self.x))
+
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
+        # Update accumulator with result.
+        self.a = self.addvalues(self.a, val)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 6
+
+    def handleADCindirectindexed(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, (self.pc + self.y))
+
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
+        # Update accumulator with result.
+        self.a = self.addvalues(self.a, val)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 5
+
     # endregion
 
     # region LDA
@@ -504,7 +542,7 @@ class Processor(MFCBase):
 
     # endregion
 
-    # region CLD
+    # region SED
     def handleSED(self):
 
         # Clear flag value.
@@ -516,7 +554,7 @@ class Processor(MFCBase):
 
     # endregion
 
-    # region CLI
+    # region SEI
     def handleSEI(self):
 
         # Clear flag value.
