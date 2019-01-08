@@ -18,6 +18,7 @@ class Processor(MFCBase):
         self.maxmemory = 65536
         self.instructions = None
         self.verbose = verbose
+        self.endaddress = 0
 
         # Load the allowable instructions.
         self.loadinstructionset()
@@ -32,7 +33,7 @@ class Processor(MFCBase):
         self.parse()
 
         # Load program into memory.
-        self.loadmemory(startaddr, self.sourcelines)
+        self.endaddress = self.loadmemory(startaddr, self.sourcelines)
 
         # Set the program counter.
         self.pc = startaddr
@@ -42,7 +43,7 @@ class Processor(MFCBase):
     def loadmemory(self, startaddress, data):
 
         # Load the data into memory.
-        self._memory.load(startaddress, data)
+        return self._memory.load(startaddress, data)
 
     def reset(self):
 
@@ -75,11 +76,14 @@ class Processor(MFCBase):
 
     def freerun(self):
 
+        processing = True
+
         # Begin message.
         self.writeheadermessage()
 
         # Loop through the code that is loaded in memory.
-        while self._memory.readbyte(self.pc) is not -1:
+        while self.pc < self.endaddress:
+
             # Fetch the first instruction.
             opcode = self._memory.readbyte(self.pc)
 
@@ -94,6 +98,7 @@ class Processor(MFCBase):
 
         # End message.
         self.writefootermessage()
+        self._memory.dump(0, 0xFF)
 
     def showcpustate(self):
 
@@ -113,12 +118,10 @@ class Processor(MFCBase):
     # region Helper Methods
 
     def writeheadermessage(self):
-        print(";;;;;;;;;;;;;;;;;;;;;;;;;")
         print("; Execution Begins: %s" % datetime.now())
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
 
     def writefootermessage(self):
-        print(";;;;;;;;;;;;;;;;;;;;;;;;;")
         print("; Execution Ends: %s" % datetime.now())
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
 
@@ -137,7 +140,7 @@ class Processor(MFCBase):
         if useonebyte:
 
             # Calculate the correct address.
-            address = self._memory.readbyte(self.pc + offset) & 0xFF
+            address = (self._memory.readbyte(self.pc) + offset) & 0xFF
 
         else:
             # Calculate the correct address.
@@ -154,7 +157,7 @@ class Processor(MFCBase):
         addcycle = 0
 
         # Calculate the address as base + offset to get first byte.
-        lowbyte = self._memory.readbyte(self.pc + offset) & 0xFF
+        lowbyte = (self._memory.readbyte(self.pc) + offset) & 0xFF
 
         # Check to see if we wrapped zero page (for additional processor cycle)
         if lowbyte < offset:
@@ -351,6 +354,7 @@ class Processor(MFCBase):
 
     def handleADCzeropagex(self):
 
+        # Get the address.
         address = (self.pc + self.x) & 0xFF
 
         # Check for valid address.
@@ -544,21 +548,42 @@ class Processor(MFCBase):
     # region LDA
     def handleLDAimmediate(self):
 
-        # Load the accumulator with value.
-        self.a = self._memory.readbyte(self.pc)
+        # Check for valid address.
+        if self.validateaddress(self.pc):
+            # Load the accumulator with value.
+            self.a = self._memory.readbyte(self.pc)
 
-        # Update flags.
-        self.setflag(Flags.ZERO, (self.a == 0))
-        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+            # Update flags.
+            self.setflag(Flags.ZERO, (self.a == 0))
+            self.setflag(Flags.NEGATIVE, (self.a & 0x80))
 
-        # Update program and cycle counters.
-        self.pc += 1
-        self.cy += 2
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
 
     def handleLDAzeropage(self):
 
+        # Check for valid address.
+        if self.validateaddress(self.pc):
+
+            # Load the accumulator with value.
+            self.a = self._memory.readbyte(self.pc)
+
+            # Update flags.
+            self.setflag(Flags.ZERO, (self.a == 0))
+            self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+    def handleLDAzeropagex(self):
+
+        # Get the address.
+        address = (self.pc + self.x) & 0xFF
+
         # Load the accumulator with value.
-        self.a = self._memory.readbyte(self.pc)
+        self.a = self._memory.readbyte(address)
 
         # Update flags.
         self.setflag(Flags.ZERO, (self.a == 0))
@@ -566,14 +591,94 @@ class Processor(MFCBase):
 
         # Update program and cycle counters.
         self.pc += 1
-        self.cy += 2
+        self.cy += 4
+
+    def handleLDAabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Load the accumulator with value.
+        self.a = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
+
+    def handleLDAabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Load the accumulator with value.
+        self.a = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
+
+    def handleLDAabsolutey(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.y)
+
+        # Load the accumulator with value.
+        self.a = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
+
+    def handleLDAindexedindirect(self):
+
+        # Get the address.
+        address, cycle = self.calculateindexedaddress(self.x)
+
+        # Load the accumulator with value.
+        self.a = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 6
+
+    def handleLDAindirectindexed(self):
+
+        # Get the address.
+        address, cycle = self.calculateindirectaddress(self.y)
+
+        # Load the accumulator with value.
+        self.a = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += (5 + cycle)
 
     # endregion
 
     # region LDX
     def handleLDXimmediate(self):
 
-        # Load the accumulator with value.
+        # Load the x register with value.
         self.x = self._memory.readbyte(self.pc)
 
         # Update flags.
@@ -586,7 +691,7 @@ class Processor(MFCBase):
 
     def handleLDXzeropage(self):
 
-        # Load the accumulator with value.
+        # Load the x register with value.
         self.x = self._memory.readbyte(self.pc)
 
         # Update flags.
@@ -595,14 +700,62 @@ class Processor(MFCBase):
 
         # Update program and cycle counters.
         self.pc += 1
-        self.cy += 2
+        self.cy += 3
+
+    def handleLDXzeropagey(self):
+
+        # Get the address.
+        address = (self.pc + self.y) & 0xFF
+
+        # Load the x register with value.
+        self.x = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.x == 0))
+        self.setflag(Flags.NEGATIVE, (self.x & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 1
+        self.cy += 4
+
+    def handleLDXabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Load the x register with value.
+        self.x = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.x == 0))
+        self.setflag(Flags.NEGATIVE, (self.x & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
+
+    def handleLDXabsolutey(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.y)
+
+        # Load the x register with value.
+        self.x = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.x == 0))
+        self.setflag(Flags.NEGATIVE, (self.x & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
 
     # endregion
 
     # region LDY
     def handleLDYimmediate(self):
 
-        # Load the accumulator with value.
+        # Load the y register with value.
         self.y = self._memory.readbyte(self.pc)
 
         # Update flags.
@@ -615,7 +768,7 @@ class Processor(MFCBase):
 
     def handleLDYzeropage(self):
 
-        # Load the accumulator with value.
+        # Load the y register with value.
         self.y = self._memory.readbyte(self.pc)
 
         # Update flags.
@@ -624,6 +777,62 @@ class Processor(MFCBase):
 
         # Update program and cycle counters.
         self.pc += 1
+        self.cy += 3
+
+    def handleLDYzeropagex(self):
+
+        # Get the address.
+        address = (self.pc + self.x) & 0xFF
+
+        # Load the y register with value.
+        self.y = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.y == 0))
+        self.setflag(Flags.NEGATIVE, (self.y & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 1
+        self.cy += 4
+
+    def handleLDYabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Load the y register with value.
+        self.y = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.y == 0))
+        self.setflag(Flags.NEGATIVE, (self.y & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
+
+    def handleLDYabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Load the y register with value.
+        self.y = self._memory.readbyte(address)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.y == 0))
+        self.setflag(Flags.NEGATIVE, (self.y & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += 2
+        self.cy += 4
+
+    # endregion
+
+    # region NOP
+    def handleNOP(self):
+
+        # Update cycle counter.
         self.cy += 2
 
     # endregion
@@ -968,6 +1177,7 @@ class Processor(MFCBase):
             0x9A: self.handleTXS,
             0x9D: self.handleSTAabsolutex,
             0xA0: self.handleLDYimmediate,
+            0xA1: self.handleLDAindexedindirect,
             0xA2: self.handleLDXimmediate,
             0xA4: self.handleLDYzeropage,
             0xA5: self.handleLDAzeropage,
@@ -975,10 +1185,22 @@ class Processor(MFCBase):
             0xA8: self.handleTAY,
             0xA9: self.handleLDAimmediate,
             0xAA: self.handleTAX,
+            0xAC: self.handleLDYabsolute,
+            0xAD: self.handleLDAabsolute,
+            0xAE: self.handleLDXabsolute,
+            0xB1: self.handleLDAindirectindexed,
+            0xB4: self.handleLDYzeropagex,
+            0xB5: self.handleLDAzeropagex,
+            0xB6: self.handleLDXzeropagey,
             0xB8: self.handleCLV,
+            0xB9: self.handleLDAabsolutey,
             0xBA: self.handleTSX,
+            0xBC: self.handleLDYabsolutex,
+            0xBD: self.handleLDAabsolutex,
+            0xBE: self.handleLDXabsolutey,
             0xC8: self.handleINY,
             0xD8: self.handleCLD,
+            0xEA: self.handleNOP,
             0xE8: self.handleINX,
             0xF8: self.handleSED
         }
