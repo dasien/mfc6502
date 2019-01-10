@@ -1,5 +1,7 @@
 ; Testing increment, decrement, and compare.
-LDX #01
+LDA #04
+STA $04
+LDX $04
 INX
 INX
 LDY #01

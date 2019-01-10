@@ -868,10 +868,10 @@ class Processor(MFCBase):
     def handleLDXimmediate(self):
 
         # Get the address.
-        address = self.calcuateaddress(True, 0)
+        #address = self.calcuateaddress(True, 0)
 
         # Perform operation.
-        self.handleLDXbase(address, 1, 2)
+        self.handleLDXbase(self.pc, 1, 2)
 
     def handleLDXzeropage(self):
 
