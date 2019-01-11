@@ -331,11 +331,8 @@ class Processor(MFCBase):
     # region ADC
     def handleADCimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, self.pc)
-
         # Perform operation.
-        self.handleADCbase(address, 1, 2)
+        self.handleADCbase(self.pc, 1, 2)
 
     def handleADCzeropage(self):
 
@@ -462,11 +459,8 @@ class Processor(MFCBase):
     # region CMP
     def handleCMPimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, self.pc)
-
         # Perform operation.
-        self.handleCMPbase(address, 1, 2)
+        self.handleCMPbase(self.pc, 1, 2)
 
     def handleCMPzeropage(self):
 
@@ -541,11 +535,8 @@ class Processor(MFCBase):
     # region CPX
     def handleCPXimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, self.pc)
-
         # Perform operation.
-        self.handleCMPbase(address, 1, 2)
+        self.handleCMPbase(self.pc, 1, 2)
 
     def handleCPXzeropage(self):
 
@@ -580,11 +571,8 @@ class Processor(MFCBase):
     # region CPY
     def handleCPYimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, self.pc)
-
-        # Perform operation.
-        self.handleCMPbase(address, 1, 2)
+       # Perform operation.
+        self.handleCMPbase(self.pc, 1, 2)
 
     def handleCPYzeropage(self):
 
@@ -787,11 +775,8 @@ class Processor(MFCBase):
     # region LDA
     def handleLDAimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, 0)
-
         # Perform operation.
-        self.handleLDAbase(address, 1, 2)
+        self.handleLDAbase(self.pc, 1, 2)
 
     def handleLDAzeropage(self):
 
@@ -867,9 +852,6 @@ class Processor(MFCBase):
     # region LDX
     def handleLDXimmediate(self):
 
-        # Get the address.
-        #address = self.calcuateaddress(True, 0)
-
         # Perform operation.
         self.handleLDXbase(self.pc, 1, 2)
 
@@ -923,11 +905,8 @@ class Processor(MFCBase):
     # region LDY
     def handleLDYimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, 0)
-
         # Perform operation.
-        self.handleLDYbase(address, 1, 2)
+        self.handleLDYbase(self.pc, 1, 2)
 
     def handleLDYzeropage(self):
 
@@ -987,124 +966,67 @@ class Processor(MFCBase):
     # region ORA
     def handleORAimmediate(self):
 
-        # Check for valid address.
-        if self.validateaddress(self.pc):
-
-            # Update accumulator with result.
-            self.a |= self._memory.readbyte(self.pc)
-
-            # Update flags.
-            self.setflag(Flags.ZERO, (self.a == 0))
-            self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-            # Update program and cycle counters.
-            self.pc += 1
-            self.cy += 2
+        # Perform operation.
+        self.handleORAbase(self.pc, 1, 2)
 
     def handleORAzeropage(self):
 
-        # Check for valid address.
-        if self.validateaddress(self.pc):
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
 
-            # Update accumulator with result.
-            self.a |= self._memory.readbyte(self.pc)
-
-            # Update flags.
-            self.setflag(Flags.ZERO, (self.a == 0))
-            self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-            # Update program and cycle counters.
-            self.pc += 1
-            self.cy += 3
+        # Perform operation.
+        self.handleORAbase(address, 1, 3)
 
     def handleORAzeropagex(self):
 
         # Get the address.
-        address = (self.pc + self.x) & 0xFF
+        address = self.calcuateaddress(True, self.x)
 
-        # Check for valid address.
-        if self.validateaddress(address):
-
-            # Update accumulator with result.
-            self.a |= address
-
-            # Update flags.
-            self.setflag(Flags.ZERO, (self.a == 0))
-            self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-            # Update program and cycle counters.
-            self.pc += 1
-            self.cy += 4
+        # Perform operation.
+        self.handleORAbase(address, 1, 4)
 
     def handleORAabsolute(self):
 
         # Get the address.
         address = self.calcuateaddress(False, 0)
 
-        # Update accumulator with result.
-        self.a |= address
-
-        # Update flags.
-        self.setflag(Flags.ZERO, (self.a == 0))
-        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-        # Update program and cycle counters.
-        self.pc += 2
-        self.cy += 4
+        # Perform operation.
+        self.handleORAbase(address, 2, 4)
 
     def handleORAabsolutex(self):
 
         # Get the address.
         address = self.calcuateaddress(False, self.x)
 
-        # Update accumulator with result.
-        self.a |= address
-
-        # Update flags.
-        self.setflag(Flags.ZERO, (self.a == 0))
-        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-        # Update program and cycle counters.
-        self.pc += 2
-        self.cy += 4
+        # Perform operation.
+        self.handleORAbase(address, 2, 4)
 
     def handleORAabsolutey(self):
 
         # Get the address.
         address = self.calcuateaddress(False, self.y)
 
-        # Update accumulator with result.
-        self.a |= address
-
-        # Update flags.
-        self.setflag(Flags.ZERO, (self.a == 0))
-        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-        # Update program and cycle counters.
-        self.pc += 2
-        self.cy += 4
+        # Perform operation.
+        self.handleORAbase(address, 2, 4)
 
     def handleORAindexedindirect(self):
 
         # Get the address.
         address, cycle = self.calculateindexedaddress(self.x)
 
-        # Update accumulator with result.
-        self.a |= address
-
-        # Update flags.
-        self.setflag(Flags.ZERO, (self.a == 0))
-        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-        # Update program and cycle counters.
-        self.pc += 2
-        self.cy += 6
+        # Perform operation.
+        self.handleORAbase(address, 2, 6)
 
     def handleORAindirectindexed(self):
 
         # Get the address.
         address, cycle = self.calculateindirectaddress(self.y)
 
+        # Perform operation.
+        self.handleORAbase(address, 2, (5 + cycle))
+
+    def handleORAbase(self, address, pcoffset, cycles):
+
         # Update accumulator with result.
         self.a |= address
 
@@ -1113,8 +1035,8 @@ class Processor(MFCBase):
         self.setflag(Flags.NEGATIVE, (self.a & 0x80))
 
         # Update program and cycle counters.
-        self.pc += 2
-        self.cy += (5 + cycle)
+        self.pc += pcoffset
+        self.cy += cycles
 
     # endregion
 
@@ -1166,11 +1088,8 @@ class Processor(MFCBase):
     # region SBC
     def handleSBCimmediate(self):
 
-        # Get the address.
-        address = self.calcuateaddress(True, self.pc)
-
         # Perform operation.
-        self.handleSBCbase(address, 1, 2)
+        self.handleSBCbase(self.pc, 1, 2)
 
     def handleSBCzeropage(self):
 
