@@ -76,8 +76,6 @@ class Processor(MFCBase):
 
     def freerun(self):
 
-        processing = True
-
         # Begin message.
         self.writeheadermessage()
 
@@ -98,7 +96,7 @@ class Processor(MFCBase):
 
         # End message.
         self.writefootermessage()
-        self._memory.dump(0, 0xFF)
+        self._memory.dump(0x04, 0xFF)
 
     def showcpustate(self):
 

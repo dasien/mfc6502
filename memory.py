@@ -71,7 +71,7 @@ class Memory(object):
         if (address is not None) and (-1 < address < 65535):
 
             # Loop through range.
-            for cell in self._memmap[address:(address + length)]:
+            for cell in self._memmap[address:(address + length + 1)]:
 
                 # Check to see if this is a new line.
                 if factor % 16 == 0:
@@ -82,7 +82,7 @@ class Memory(object):
                     stringtoprint.clear()
 
                     # Start a new row.
-                    stringtoprint.append("%04x: %02x " % ((address + (16 * factor)), cell))
+                    stringtoprint.append("%04x: %02x " % ((address + factor), cell))
 
                 else:
                     # Append value to current row.
@@ -91,3 +91,5 @@ class Memory(object):
                 # Increment factor.
                 factor += 1
 
+            # Print the final row.
+            print(''.join(stringtoprint))
