@@ -150,6 +150,13 @@ class Processor(MFCBase):
 
         return address
 
+    # TODO: Need to calculate accurate cycle times for calculations that cross page boundries.
+    def calculaterelativeaddress(self, address):
+
+        # If the address is less than 128, just return it, otherwise subtract 256 from it and return it.
+        return address if address < 0x80 else address - 0x100
+
+    # TODO: Need to calculate accurate cycle times for calculations that cross page boundries.
     def calculateindexedaddress(self, offset):
 
         # This holds any additional cycle timing that needs to be added due to page boundry crossing.
@@ -171,6 +178,7 @@ class Processor(MFCBase):
 
         return address, addcycle
 
+    # TODO: Need to calculate accurate cycle times for calculations that cross page boundries.
     def calculateindirectaddress(self, offset):
 
         # This holds any additional cycle timing that needs to be added due to page boundry crossing.
@@ -471,8 +479,11 @@ class Processor(MFCBase):
 
     def handleANDbase(self, address, pcoffset, cycles):
 
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
         # Update accumulator with result.
-        self.a &= address
+        self.a &= val
 
         # Update flags.
         self.setflag(Flags.ZERO, (self.a == 0))
@@ -481,6 +492,138 @@ class Processor(MFCBase):
         # Update program and cycle counters.
         self.pc += pcoffset
         self.cy += cycles
+
+    # endregion
+
+    # region ASL
+    def handleASLaccumulator(self):
+
+        # Take the high bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (self.a & 0x80))
+
+        # Rotate the value to the left << one place.  Bit 0 is set to 0.
+        self.a = (self.a << 1) & 0xFE
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update cycle counter.
+        self.cy += 2
+
+    def handleASLzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleASLbase(address, 1, 5)
+
+    def handleASLzeropagex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
+
+        # Perform operation.
+        self.handleASLbase(address, 1, 6)
+
+    def handleASLabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleASLbase(address, 2, 6)
+
+    def handleASLabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Perform operation.
+        self.handleASLbase(address, 2, 7)
+
+    def handleASLbase(self, address, pcoffset, cycles):
+
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
+        # Take the high bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (self.a & 0x80))
+
+        # Rotate the value to the left << one place.  Bit 0 is set to 0.
+        val = (val << 1) & 0xFE
+
+        # Write the value back to memory.
+        self._memory.writebyte(address, val)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (val == 0))
+        self.setflag(Flags.NEGATIVE, (val & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
+
+    # endregion
+
+    # region BCC
+    def handleBCC(self):
+
+        # Check to see if the carry flag is clear.
+        if self.getflag(Flags.CARRY):
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+        else:
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+    # endregion
+
+    # region BCS
+    def handleBCS(self):
+
+        # Check to see if the carry flag is set.
+        if self.getflag(Flags.CARRY):
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+        else:
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+    # endregion
+
+    # region BEQ
+    def handleBEQ(self):
+
+        # Check to see if the zero flag is set.
+        if self.getflag(Flags.ZERO):
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+        else:
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
 
     # endregion
 
@@ -510,6 +653,106 @@ class Processor(MFCBase):
         self.setflag(Flags.ZERO, (result == 0))
         self.setflag(Flags.NEGATIVE, (result & 0x80))
         self.setflag(Flags.OVERFLOW, (result & 0x40))
+
+    # endregion
+
+    # region BMI
+    def handleBMI(self):
+
+        # Check to see if the negative flag is set.
+        if self.getflag(Flags.NEGATIVE):
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+        else:
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+    # endregion
+
+    # region BNE
+    def handleBNE(self):
+
+        # Check to see if the zero flag is clear.
+        if self.getflag(Flags.ZERO):
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+        else:
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+    # endregion
+
+    # region BPL
+    def handleBPL(self):
+
+        # Check to see if the negative flag is clear.
+        if self.getflag(Flags.NEGATIVE):
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+        else:
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+    # endregion
+
+    # region BVC
+    def handleBVC(self):
+
+        # Check to see if the overflow flag is clear.
+        if self.getflag(Flags.OVERFLOW):
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
+
+        else:
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+    # endregion
+
+    # region BVS
+    def handleBVS(self):
+
+        # Check to see if the overflow flag is set.
+        if self.getflag(Flags.OVERFLOW):
+
+            # Calculate new pc location.
+            self.pc = self.calculaterelativeaddress(self.pc)
+
+            # Update cycle counter.
+            self.cy += 3
+
+        else:
+
+            # Update program and cycle counters.
+            self.pc += 1
+            self.cy += 2
 
     # endregion
 
@@ -857,8 +1100,11 @@ class Processor(MFCBase):
 
     def handleEORbase(self, address, pcoffset, cycles):
 
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
         # Update accumulator with result.
-        self.a ^= address
+        self.a ^= val
 
         # Update flags.
         self.setflag(Flags.ZERO, (self.a == 0))
@@ -868,7 +1114,7 @@ class Processor(MFCBase):
         self.pc += pcoffset
         self.cy += cycles
 
-    # end region
+    # endregion
 
     # region INC
     def handleINCzeropage(self):
@@ -951,6 +1197,37 @@ class Processor(MFCBase):
 
         # Update cycle counters.
         self.cy += 2
+
+    # endregion
+
+    # region JMP
+    def handleJMPabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform Operation.
+        self.handleJMPbase(address, 2, 3)
+
+    def handleJMPindirect(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Use this to get the actual jump address.
+        jumpaddress = self._memory.readbyte(address) + (0x100 * self._memory.readbyte(address + 1))
+
+        # Perform Operation
+        self.handleJMPbase(jumpaddress, 2, 5)
+
+    def handleJMPbase(self, address, pcoffset, cycles):
+
+        # Set the program counter to address.
+        self.pc = address
+
+        # Update program and cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
 
     # endregion
 
@@ -1137,6 +1414,78 @@ class Processor(MFCBase):
 
     # endregion
 
+    # region LSR
+    def handleLSRaccumulator(self):
+
+        # Take the low bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (self.a & 0x01))
+
+        # Rotate the value to the right >> one place.  Bit 7 is set to 0.
+        self.a = (self.a >> 1) & 0x7F
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update cycle counter.
+        self.cy += 2
+
+    def handleLSRzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleLSRbase(address, 1, 5)
+
+    def handleLSRzeropagex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
+
+        # Perform operation.
+        self.handleLSRbase(address, 1, 6)
+
+    def handleLSRabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleLSRbase(address, 2, 6)
+
+    def handleLSRabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Perform operation.
+        self.handleLSRbase(address, 2, 7)
+
+    def handleLSRbase(self, address, pcoffset, cycles):
+
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
+        # Take the low bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (val & 0x01))
+
+        # Rotate the value to the right >> one place.  Bit 7 is set to 0.
+        val = (val >> 1) & 0xFE
+
+        # Write the value back to memory.
+        self._memory.writebyte(address, val)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (val == 0))
+        self.setflag(Flags.NEGATIVE, (val & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
+
+    # endregion
+
     # region NOP
     def handleNOP(self):
 
@@ -1209,8 +1558,11 @@ class Processor(MFCBase):
 
     def handleORAbase(self, address, pcoffset, cycles):
 
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
         # Update accumulator with result.
-        self.a |= address
+        self.a |= val
 
         # Update flags.
         self.setflag(Flags.ZERO, (self.a == 0))
@@ -1266,6 +1618,162 @@ class Processor(MFCBase):
         self.pf = self.popstack8()
 
     #endregion
+
+    # region ROL
+    def handleROLaccumulator(self):
+
+        # Capture current CFlag
+        ctmp = self.getflag(Flags.CARRY)
+
+        # Take the high bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (self.a & 0x80))
+
+        # Rotate the value to the left << one place.  Bit 0 is set to the value of the old CFlag.
+        self.a = ((self.a << 1) | (0x01 if ctmp else 0)) & 0xFF
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update cycle counter.
+        self.cy += 2
+
+    def handleROLzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleROLbase(address, 1, 5)
+
+    def handleROLzeropagex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
+
+        # Perform operation.
+        self.handleROLbase(address, 1, 6)
+
+    def handleROLabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleROLbase(address, 2, 6)
+
+    def handleROLabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Perform operation.
+        self.handleROLbase(address, 2, 7)
+
+    def handleROLbase(self, address, pcoffset, cycles):
+
+        # Capture current CFlag
+        ctmp = self.getflag(Flags.CARRY)
+
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
+        # Take the high bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (self.a & 0x80))
+
+        # Rotate the value to the left << one place.  Bit 0 is set to the value of the old CFlag.
+        val = ((val << 1) | (0x01 if ctmp else 0)) & 0xFF
+
+        # Write the value back to memory.
+        self._memory.writebyte(address, val)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (val == 0))
+        self.setflag(Flags.NEGATIVE, (val & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
+
+    # endregion
+
+    # region ROR
+    def handleRORaccumulator(self):
+
+        # Capture current CFlag
+        ctmp = self.getflag(Flags.CARRY)
+
+        # Take the low bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (self.a & 0x01))
+
+        # Rotate the value to the right >> one place.  Bit 7 is set to the value of the old CFlag.
+        self.a = (self.a >> 1) | (0x80 if ctmp else 0)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update cycle counter.
+        self.cy += 2
+
+    def handleRORzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleRORbase(address, 1, 5)
+
+    def handleRORzeropagex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
+
+        # Perform operation.
+        self.handleRORbase(address, 1, 6)
+
+    def handleRORabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleRORbase(address, 2, 6)
+
+    def handleRORabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Perform operation.
+        self.handleRORbase(address, 2, 7)
+
+    def handleRORbase(self, address, pcoffset, cycles):
+
+        # Capture current CFlag
+        ctmp = self.getflag(Flags.CARRY)
+
+        # Get the value at that address.
+        val = self._memory.readbyte(address)
+
+        # Take the low bit of value and set it to Carry flag.
+        self.setflag(Flags.CARRY, (val & 0x01))
+
+        # Rotate the value to the right >> one place.  Bit 7 is set to the value of the old CFlag.
+        val = (val >> 1) | (0x80 if ctmp else 0)
+
+        # Write the value back to memory.
+        self._memory.writebyte(address, val)
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (val == 0))
+        self.setflag(Flags.NEGATIVE, (val & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
+
+    # endregion
 
     # region SBC
     def handleSBCimmediate(self):
@@ -1592,6 +2100,8 @@ class Processor(MFCBase):
         # Update cycle counter.
         self.cy += 2
 
+    # endregion
+
     # region TYA
     def handleTYA(self):
 
@@ -1609,67 +2119,77 @@ class Processor(MFCBase):
 
     # endregion
 
-    # region TYA
-    def handleTYA(self):
-
-        # Copy accumulator to y register.
-        self.a = self.y
-
-        # Update flags.
-        self.setflag(Flags.ZERO, (self.a == 0))
-        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
-
-        # Update cycle counter.
-        self.cy += 2
-
-    # endregion
-    # endregion
-
     # region Instruction Set
     def loadinstructionset(self):
         self.instructions = {
             0x01: self.handleORAindexedindirect,
             0x05: self.handleORAzeropage,
+            0x06: self.handleASLzeropage,
             0x08: self.handlePHP,
             0x09: self.handleORAimmediate,
+            0x0A: self.handleASLaccumulator,
             0x0D: self.handleORAabsolute,
+            0x0E: self.handleASLabsolute,
+            0x10: self.handleBPL,
             0x11: self.handleORAindirectindexed,
             0x15: self.handleORAzeropagex,
+            0x16: self.handleASLzeropagex,
             0x18: self.handleCLC,
             0x19: self.handleORAabsolutey,
             0x1D: self.handleORAabsolutex,
+            0x1E: self.handleASLabsolutex,
             0x21: self.handleANDindexedindirect,
             0x24: self.handleBITzeropage,
             0x25: self.handleANDzeropage,
+            0x26: self.handleROLzeropage,
             0x28: self.handlePLP,
             0x29: self.handleANDimmediate,
+            0x2A: self.handleROLaccumulator,
             0x2C: self.handleBITabsolute,
             0x2D: self.handleANDabsolute,
+            0x2E: self.handleROLabsolute,
+            0x30: self.handleBMI,
             0x31: self.handleANDindirectindexed,
             0x35: self.handleANDzeropagex,
+            0x36: self.handleROLzeropagex,
             0x38: self.handleSEC,
             0x39: self.handleANDabsolutey,
             0x3D: self.handleANDabsolutex,
+            0x3E: self.handleROLabsolutex,
             0x41: self.handleEORindexedindirect,
             0x45: self.handleEORzeropage,
+            0x46: self.handleLSRzeropage,
             0x48: self.handlePHA,
             0x49: self.handleEORimmediate,
+            0x4A: self.handleLSRaccumulator,
+            0x4C: self.handleJMPabsolute,
             0x4D: self.handleEORabsolute,
+            0x4E: self.handleLSRabsolute,
+            0x50: self.handleBVC,
             0x51: self.handleEORindirectindexed,
             0x55: self.handleEORzeropagex,
+            0x56: self.handleLSRzeropagex,
             0x58: self.handleCLI,
             0x59: self.handleEORabsolutey,
             0x5D: self.handleEORabsolutex,
+            0x5E: self.handleLSRabsolutex,
             0x61: self.handleADCindexedindirect,
             0x65: self.handleADCzeropage,
+            0x66: self.handleRORzeropage,
             0x68: self.handlePLA,
             0x69: self.handleADCimmediate,
+            0x6A: self.handleRORaccumulator,
+            0x6C: self.handleJMPindirect,
             0x6D: self.handleADCabsolute,
+            0x6E: self.handleRORabsolute,
+            0x70: self.handleBVS,
             0x71: self.handleADCindirectindexed,
             0x75: self.handleADCzeropagex,
+            0x76: self.handleRORzeropagex,
             0x78: self.handleSEI,
             0x79: self.handleADCabsolutey,
             0x7D: self.handleADCabsolutex,
+            0x7E: self.handleRORabsolutex,
             0x81: self.handleSTAindexedindirect,
             0x84: self.handleSTYzeropage,
             0x85: self.handleSTAzeropage,
@@ -1679,6 +2199,7 @@ class Processor(MFCBase):
             0x8C: self.handleSTYabsolute,
             0x8D: self.handleSTAabsolute,
             0x8E: self.handleSTXabsolute,
+            0x90: self.handleBCC,
             0x91: self.handleSTAindirectindexed,
             0x94: self.handleSTYzeropagex,
             0x95: self.handleSTAzeropagex,
@@ -1699,6 +2220,7 @@ class Processor(MFCBase):
             0xAC: self.handleLDYabsolute,
             0xAD: self.handleLDAabsolute,
             0xAE: self.handleLDXabsolute,
+            0xB0: self.handleBCS,
             0xB1: self.handleLDAindirectindexed,
             0xB4: self.handleLDYzeropagex,
             0xB5: self.handleLDAzeropagex,
@@ -1720,6 +2242,7 @@ class Processor(MFCBase):
             0xCC: self.handleCPYabsolute,
             0xCD: self.handleCMPabsolute,
             0xCE: self.handleDECabsolute,
+            0xD0: self.handleBNE,
             0xD1: self.handleCMPindirectindexed,
             0xD5: self.handleCMPzeropagex,
             0xD6: self.handleDECzeropagex,
@@ -1738,6 +2261,7 @@ class Processor(MFCBase):
             0xEC: self.handleCPXabsolute,
             0xED: self.handleSBCabsolute,
             0xEE: self.handleINCabsolute,
+            0xF0: self.handleBEQ,
             0xF1: self.handleSBCindirectindexed,
             0xF5: self.handleSBCzeropagex,
             0xF6: self.handleINCzeropagex,
