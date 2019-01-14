@@ -69,7 +69,8 @@ class Processor(MFCBase):
             return True
         else:
             print("ERROR: Bad reset vector address %s,%s" %
-                  (format(str(self._memory.readbyte(addrlow)), '02X'), format(str(self._memory.readbyte(addrhigh)), '02X')))
+                  (format(str(self._memory.readbyte(addrlow)), '02X'),
+                   format(str(self._memory.readbyte(addrhigh)), '02X')))
             return False
 
     # def singlestep(self):
@@ -335,7 +336,7 @@ class Processor(MFCBase):
     def handleADCzeropage(self):
 
         # Get the address.
-        address = self.calcuateaddress(True, self.pc)
+        address = self.calcuateaddress(True, 0)
 
         # Perform operation.
         self.handleADCbase(address, 1, 3)
@@ -403,6 +404,112 @@ class Processor(MFCBase):
         # Update program and cycle counters.
         self.pc += pcoffset
         self.cy += cycles
+
+    # endregion
+
+    # region AND
+    def handleANDimmediate(self):
+
+        # Perform operation.
+        self.handleANDbase(self.pc, 1, 2)
+
+    def handleANDzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleANDbase(address, 1, 3)
+
+    def handleANDzeropagex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
+
+        # Perform operation.
+        self.handleANDbase(address, 1, 4)
+
+    def handleANDabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleANDbase(address, 2, 4)
+
+    def handleANDabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Perform operation.
+        self.handleANDbase(address, 2, 4)
+
+    def handleANDabsolutey(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.y)
+
+        # Perform operation.
+        self.handleANDbase(address, 2, 4)
+
+    def handleANDindexedindirect(self):
+
+        # Get the address.
+        address, cycle = self.calculateindexedaddress(self.x)
+
+        # Perform operation.
+        self.handleANDbase(address, 2, 6)
+
+    def handleANDindirectindexed(self):
+
+        # Get the address.
+        address, cycle = self.calculateindirectaddress(self.y)
+
+        # Perform operation.
+        self.handleANDbase(address, 2, (5 + cycle))
+
+    def handleANDbase(self, address, pcoffset, cycles):
+
+        # Update accumulator with result.
+        self.a &= address
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program and cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
+
+    # endregion
+
+    # region BIT
+    def handleBITzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleBITbase(address, 1, 3)
+
+    def handleBITabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleBITbase(address, 2, 4)
+
+    def handleBITbase(self, address, pcoffset, cycles):
+
+        # Perform and on accumulator and value in memory.
+        result = self.a & self._memory.readbyte(address)
+
+        # Set flags according to result. Negative flag gets bit 7 if set, and overflow gets bit 6 if set.
+        self.setflag(Flags.ZERO, (result == 0))
+        self.setflag(Flags.NEGATIVE, (result & 0x80))
+        self.setflag(Flags.OVERFLOW, (result & 0x40))
 
     # endregion
 
@@ -685,6 +792,83 @@ class Processor(MFCBase):
         self.cy += 2
 
     # endregion
+
+    # region EOR
+    def handleEORimmediate(self):
+
+        # Perform operation.
+        self.handleEORbase(self.pc, 1, 2)
+
+    def handleEORzeropage(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, 0)
+
+        # Perform operation.
+        self.handleEORbase(address, 1, 3)
+
+    def handleEORzeropagex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(True, self.x)
+
+        # Perform operation.
+        self.handleEORbase(address, 1, 4)
+
+    def handleEORabsolute(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, 0)
+
+        # Perform operation.
+        self.handleEORbase(address, 2, 4)
+
+    def handleEORabsolutex(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.x)
+
+        # Perform operation.
+        self.handleEORbase(address, 2, 4)
+
+    def handleEORabsolutey(self):
+
+        # Get the address.
+        address = self.calcuateaddress(False, self.y)
+
+        # Perform operation.
+        self.handleEORbase(address, 2, 4)
+
+    def handleEORindexedindirect(self):
+
+        # Get the address.
+        address, cycle = self.calculateindexedaddress(self.x)
+
+        # Perform operation.
+        self.handleEORbase(address, 2, 6)
+
+    def handleEORindirectindexed(self):
+
+        # Get the address.
+        address, cycle = self.calculateindirectaddress(self.y)
+
+        # Perform operation.
+        self.handleEORbase(address, 2, (5 + cycle))
+
+    def handleEORbase(self, address, pcoffset, cycles):
+
+        # Update accumulator with result.
+        self.a ^= address
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.a == 0))
+        self.setflag(Flags.NEGATIVE, (self.a & 0x80))
+
+        # Update program EOR cycle counters.
+        self.pc += pcoffset
+        self.cy += cycles
+
+    # end region
 
     # region INC
     def handleINCzeropage(self):
@@ -970,7 +1154,7 @@ class Processor(MFCBase):
     def handleORAzeropage(self):
 
         # Get the address.
-        address = self.calcuateaddress(True, self.x)
+        address = self.calcuateaddress(True, 0)
 
         # Perform operation.
         self.handleORAbase(address, 1, 3)
@@ -1092,7 +1276,7 @@ class Processor(MFCBase):
     def handleSBCzeropage(self):
 
         # Get the address.
-        address = self.calcuateaddress(True, self.pc)
+        address = self.calcuateaddress(True, 0)
 
         # Perform operation.
         self.handleSBCbase(address, 1, 3)
@@ -1454,10 +1638,28 @@ class Processor(MFCBase):
             0x18: self.handleCLC,
             0x19: self.handleORAabsolutey,
             0x1D: self.handleORAabsolutex,
+            0x21: self.handleANDindexedindirect,
+            0x24: self.handleBITzeropage,
+            0x25: self.handleANDzeropage,
             0x28: self.handlePLP,
+            0x29: self.handleANDimmediate,
+            0x2C: self.handleBITabsolute,
+            0x2D: self.handleANDabsolute,
+            0x31: self.handleANDindirectindexed,
+            0x35: self.handleANDzeropagex,
             0x38: self.handleSEC,
+            0x39: self.handleANDabsolutey,
+            0x3D: self.handleANDabsolutex,
+            0x41: self.handleEORindexedindirect,
+            0x45: self.handleEORzeropage,
             0x48: self.handlePHA,
+            0x49: self.handleEORimmediate,
+            0x4D: self.handleEORabsolute,
+            0x51: self.handleEORindirectindexed,
+            0x55: self.handleEORzeropagex,
             0x58: self.handleCLI,
+            0x59: self.handleEORabsolutey,
+            0x5D: self.handleEORabsolutex,
             0x61: self.handleADCindexedindirect,
             0x65: self.handleADCzeropage,
             0x68: self.handlePLA,
