@@ -140,7 +140,6 @@ class Assembler(MFCBase):
                                 # Operand is address or value.  Get command data.
                                 opcodehex, opcodelen, operand = self.getopcodedata(sourceline[0], sourceline[1])
 
-                    # Check to see if this is a label.
                     elif sourceline[0] in self.__labels:
 
                         # We found a label.  Need to get the opcode from the next part.
@@ -195,8 +194,11 @@ class Assembler(MFCBase):
 
     def createsymbol(self, sourceline):
 
+        # Remove trailing colon if present.
+        label = sourceline[0].rstrip(':')
+
         # Add symbol to table.
-        self.__labels[sourceline[0]] = "${0:04X}".format(super(Assembler, self).pc)
+        self.__labels[label] = "${0:04X}".format(super(Assembler, self).pc)
 
         if sourceline[1] in super(Assembler, self).opcodes:
             # Get the hex value of the opcode and the length.

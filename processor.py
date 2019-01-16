@@ -297,7 +297,7 @@ class Processor(MFCBase):
         # Return the value at this address.
         return self._memory.readbyte(self.sp)
 
-    def stackpush16(self, value):
+    def pushstack16(self, value):
 
         # Push the first byte to stack pointer.
         self._memory.writebyte(self.sp, (value & 0xFF))
@@ -308,7 +308,7 @@ class Processor(MFCBase):
         # Decrement the stack pointer
         self.sp -= 2
 
-    def stackpop16(self):
+    def popstack16(self):
 
         # Increment the stack pointer.
         self.sp += 2
@@ -1231,6 +1231,20 @@ class Processor(MFCBase):
 
     # endregion
 
+    # region JSR
+    def handleJSR(self):
+
+        # Push next instruction onto the stack.
+        self.pushstack8(self._memory.readbyte(self.pc + 2))
+
+        # Set pc to the address of subroutine.
+        self.pc = self.calcuateaddress(False, 0)
+
+        # Update cycle count.
+        self.cy += 6
+
+    # endregion
+
     # region LDA
     def handleLDAimmediate(self):
 
@@ -1775,6 +1789,14 @@ class Processor(MFCBase):
 
     # endregion
 
+    # region RTS
+    def handleRTS(self):
+
+        # Restore the pc from stack.
+        self.pc = self.popstack16()
+
+    # endregion
+
     # region SBC
     def handleSBCimmediate(self):
 
@@ -2138,6 +2160,7 @@ class Processor(MFCBase):
             0x19: self.handleORAabsolutey,
             0x1D: self.handleORAabsolutex,
             0x1E: self.handleASLabsolutex,
+            0x20: self.handleJSR,
             0x21: self.handleANDindexedindirect,
             0x24: self.handleBITzeropage,
             0x25: self.handleANDzeropage,
@@ -2173,6 +2196,7 @@ class Processor(MFCBase):
             0x59: self.handleEORabsolutey,
             0x5D: self.handleEORabsolutex,
             0x5E: self.handleLSRabsolutex,
+            0x60: self.handleRTS,
             0x61: self.handleADCindexedindirect,
             0x65: self.handleADCzeropage,
             0x66: self.handleRORzeropage,
