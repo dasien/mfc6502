@@ -581,8 +581,11 @@ class Processor(MFCBase):
 
         else:
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -595,8 +598,11 @@ class Processor(MFCBase):
         # Check to see if the carry flag is set.
         if self.getflag(Flags.CARRY):
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -615,8 +621,11 @@ class Processor(MFCBase):
         # Check to see if the zero flag is set.
         if self.getflag(Flags.ZERO):
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -664,8 +673,11 @@ class Processor(MFCBase):
         # Check to see if the negative flag is set.
         if self.getflag(Flags.NEGATIVE):
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -690,8 +702,11 @@ class Processor(MFCBase):
 
         else:
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -710,8 +725,11 @@ class Processor(MFCBase):
 
         else:
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -730,8 +748,11 @@ class Processor(MFCBase):
 
         else:
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -744,8 +765,11 @@ class Processor(MFCBase):
         # Check to see if the overflow flag is set.
         if self.getflag(Flags.OVERFLOW):
 
+            # Get address.
+            address = self.calcuateaddress(True, 0)
+
             # Calculate new pc location.
-            self.pc = self.calculaterelativeaddress(self.pc)
+            self.pc += self.calculaterelativeaddress(address)
 
             # Update cycle counter.
             self.cy += 3
@@ -886,7 +910,7 @@ class Processor(MFCBase):
     def handleCPXimmediate(self):
 
         # Perform operation.
-        self.handleCMPbase(self.pc, 1, 2)
+        self.handleCPXbase(self.pc, 1, 2)
 
     def handleCPXzeropage(self):
 
@@ -894,7 +918,7 @@ class Processor(MFCBase):
         address = self.calcuateaddress(True, self.pc)
 
         # Perform operation.
-        self.handleCMPbase(address, 1, 3)
+        self.handleCPXbase(address, 1, 3)
 
     def handleCPXabsolute(self):
 
@@ -902,7 +926,7 @@ class Processor(MFCBase):
         address = self.calcuateaddress(False, 0)
 
         # Perform operation.
-        self.handleCMPbase(address, 2, 4)
+        self.handleCPXbase(address, 2, 4)
 
     def handleCPXbase(self, address, pcoffset, cycles):
 
@@ -921,8 +945,8 @@ class Processor(MFCBase):
     # region CPY
     def handleCPYimmediate(self):
 
-       # Perform operation.
-        self.handleCMPbase(self.pc, 1, 2)
+        # Perform operation.
+        self.handleCPYbase(self.pc, 1, 2)
 
     def handleCPYzeropage(self):
 
@@ -930,7 +954,7 @@ class Processor(MFCBase):
         address = self.calcuateaddress(True, self.pc)
 
         # Perform operation.
-        self.handleCMPbase(address, 1, 3)
+        self.handleCPYbase(address, 1, 3)
 
     def handleCPYabsolute(self):
 
@@ -938,7 +962,7 @@ class Processor(MFCBase):
         address = self.calcuateaddress(False, 0)
 
         # Perform operation.
-        self.handleCMPbase(address, 2, 4)
+        self.handleCPYbase(address, 2, 4)
 
     def handleCPYbase(self, address, pcoffset, cycles):
 

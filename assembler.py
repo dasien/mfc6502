@@ -104,6 +104,9 @@ class Assembler(MFCBase):
             # Loop through file.
             for sourceline in super(Assembler, self).sourcelines:
 
+                # Reset print flag.
+                printlinedata = True
+
                 # Check to see if this is a program counter.
                 if not self.setprogramcounter(sourceline[0]):
 
@@ -147,28 +150,38 @@ class Assembler(MFCBase):
 
                     elif sourceline[0] in self.__labels:
 
-                        # We found a label.  Need to get the opcode from the next part.
-                        if sourceline[1] in super(Assembler, self).opcodes:
+                        # Check to see if it is a label with a blaank line (opcode on next line).
+                        if len(sourceline) > 1:
 
-                            # Get the hex value of the opcode and the length.
-                            opcodehex, opcodelen, operand = self.resolvesymboldata(sourceline)
+                            # We found a label.  Need to get the opcode from the next part.
+                            if sourceline[1] in super(Assembler, self).opcodes:
 
-                        # Check to see if this is an assignment.
-                        elif sourceline[1] == "=" or sourceline[1] == ".EQU":
+                                # Get the hex value of the opcode and the length.
+                                opcodehex, opcodelen, operand = self.resolvesymboldata(sourceline)
 
-                            # This is a variable assignment - skip it.
-                            continue
+                            # Check to see if this is an assignment.
+                            elif sourceline[1] == "=" or sourceline[1] == ".EQU":
 
+                                # This is a variable assignment - skip it.
+                                continue
+
+                        else:
+
+                            # Flag this line as only a label so no printing is done.
+                            printlinedata = False
                     else:
 
                         # We shouldn't get here unless something is wrong.
                         raise Exception("Syntax Error.")
 
-                    # Write the data for the line and logging data.
-                    self.writelinedata(opcodehex, operand)
+                    # Check to see if we should print the line.
+                    if printlinedata:
 
-                    # Increment program counter.
-                    self.incrementprogramcounter(opcodelen)
+                        # Write the data for the line and logging data.
+                        self.writelinedata(opcodehex, operand)
+
+                        # Increment program counter.
+                        self.incrementprogramcounter(opcodelen)
 
             # Report bytes written.
             print("Wrote %s bytes to file..." % super(Assembler, self).bytecount)
