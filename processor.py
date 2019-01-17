@@ -314,7 +314,9 @@ class Processor(MFCBase):
         self.sp += 2
 
         # Return the combined value of the stack pointer low byte + the high byte.
-        return self._memory.readbyte(self.sp) + (0x100 * self._memory.readbyte(self.sp - 1))
+        value = self._memory.readbyte(self.sp) + (0x100 * self._memory.readbyte(self.sp - 1))
+
+        return value
 
     # endregion
 
@@ -1235,7 +1237,7 @@ class Processor(MFCBase):
     def handleJSR(self):
 
         # Push next instruction onto the stack.
-        self.pushstack8(self._memory.readbyte(self.pc + 2))
+        self.pushstack16(self.pc + 2)
 
         # Set pc to the address of subroutine.
         self.pc = self.calcuateaddress(False, 0)

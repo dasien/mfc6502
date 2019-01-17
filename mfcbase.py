@@ -60,35 +60,35 @@ class MFCBase(object):
 
     def parse(self):
 
-        #try:
+        try:
 
-        # Loop through file.
-        for line in self.__infile:
+            # Loop through file.
+            for line in self.__infile:
 
-            line = line.strip()
+                line = line.strip()
 
-            # Check to see if this is a blank line.
-            if not line.strip() or line[0] in ";":
+                # Check to see if this is a blank line.
+                if not line.strip() or line[0] in ";":
 
-                # Skip the line.
-                continue
+                    # Skip the line.
+                    continue
 
-            else:
+                else:
 
-                # Split the line up into parts.
-                lineparts = self.splitline(line)
+                    # Split the line up into parts.
+                    lineparts = self.splitline(line)
 
-                # Loop through the line parts to make sure there are no trailing colons.
-                lineparts[0] = lineparts[0].rstrip(':')
+                    # Loop through the line parts to make sure there are no trailing colons.
+                    lineparts[0] = lineparts[0].rstrip(':')
 
-                # Add to source list.
-                self.__sourcelines.append(lineparts)
+                    # Add to source list.
+                    self.__sourcelines.append(lineparts)
 
-        # Report lines parsed.
-        print("Finishing parsing %s source lines..." % len(self.__sourcelines))
+            # Report lines parsed.
+            print("Finishing parsing %s source lines..." % len(self.__sourcelines))
 
-        #except:
-            #raise Exception("Error in parsing file.")
+        except:
+            raise Exception("Error in parsing file.")
 
     @property
     def infile(self):

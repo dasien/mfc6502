@@ -106,5 +106,5 @@ except PermissionError:
 except IOError:
     print('Error: Unspecified IO error.')
 
-#except ValueError:
-    #print('Invalid start address or format or value.')
+except ValueError:
+    print('Invalid start address or format or value.')

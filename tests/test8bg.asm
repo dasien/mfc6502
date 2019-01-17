@@ -1,7 +1,16 @@
-JSR Init
-STX $01
+  JSR init
+  JSR loop
+  JSR end
 
-Init: INX
-INX
-INX
-RTS
+init:
+  LDX #$00
+  RTS
+
+loop:
+  INX
+  CPX #$05
+  BNE loop
+  RTS
+
+end:
+  BRK

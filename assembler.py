@@ -1,15 +1,17 @@
 from mfcbase import MFCBase
 
+
 #TODO: Need to handle in line comments after operand ex. LDA $01 ;This is a line comment
 class Assembler(MFCBase):
 
     def __init__(self, infile, outfile, startaddr=None, includecounter=False):
 
-        # Superclass init.
-        super(Assembler, self).__init__(infile, outfile, startaddr, includecounter)
-
         # Labels are supported.
         self.__labels = dict()
+        self.pc = 0x0000
+
+        # Superclass init.
+        super(Assembler, self).__init__(infile, outfile, startaddr, includecounter)
 
         # Load opcode table.
         self.loadopcodes()
@@ -30,7 +32,7 @@ class Assembler(MFCBase):
         try:
 
             # A temporary program counter.
-            temp = super(Assembler, self).pc
+            temp = self.pc
 
             # Loop through the source lines (label pass).
             for sourceline in super(Assembler, self).sourcelines:
@@ -73,10 +75,13 @@ class Assembler(MFCBase):
                         # Increment program counter.
                         self.incrementprogramcounter(opcodelen)
 
-                    elif sourceline[1] == "=" or sourceline[1] == ".EQU":
+                    elif len(super(Assembler, self).sourcelines) == 2:
 
-                        # This is a variable.  Add it to symbol table with address.
-                        self.createvariable(sourceline)
+                        # Check to see if this is a variable.
+                        if sourceline[1] == "=" or sourceline[1] == ".EQU":
+
+                            # This is a variable.  Add it to symbol table with address.
+                            self.createvariable(sourceline)
 
                     else:
 
@@ -200,12 +205,15 @@ class Assembler(MFCBase):
         # Add symbol to table.
         self.__labels[label] = "${0:04X}".format(super(Assembler, self).pc)
 
-        if sourceline[1] in super(Assembler, self).opcodes:
-            # Get the hex value of the opcode and the length.
-            opcodehex, opcodelen, operand = self.resolvesymboldata(sourceline)
+        # Check to see if there is only a label on this line.
+        if len(sourceline) > 1:
 
-            # Increment program counter.
-            self.incrementprogramcounter(opcodelen)
+            if sourceline[1] in super(Assembler, self).opcodes:
+                # Get the hex value of the opcode and the length.
+                opcodehex, opcodelen, operand = self.resolvesymboldata(sourceline)
+
+                # Increment program counter.
+                self.incrementprogramcounter(opcodelen)
 
     def resolvesymboldata(self, sourceline):
 
