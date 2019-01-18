@@ -153,6 +153,9 @@ class Processor(MFCBase):
     # TODO: Need to calculate accurate cycle times for calculations that cross page boundries.
     def calculaterelativeaddress(self, address):
 
+        # First increment the address.  This is because relative address is PC + 1.
+        address += 1
+
         # If the address is less than 128, just return it, otherwise subtract 256 from it and return it.
         return address if address < 0x80 else address - 0x100
 
@@ -733,6 +736,29 @@ class Processor(MFCBase):
 
             # Update cycle counter.
             self.cy += 3
+
+    # endregion
+
+    # region BRK
+    def handleBRK(self):
+
+        # Increment program counter.
+        self.pc += 2
+
+        # Set break flag.
+        self.setflag(Flags.BREAK, 1)
+
+        # Store the pc on the stack.
+        self.pushstack16(self.pc)
+
+        # Store the pf on the stack.
+        self.pushstack8(self.pf)
+
+        # Set the inturrupt flag.
+        self.setflag(Flags.INTERRUPT, 1)
+
+        # Load the pc with the inturrupt address vector contents.
+        self.pc = self._memory.readtwobytes(Vectors.IRQ_ADDR_LOW)
 
     # endregion
 
@@ -1815,6 +1841,17 @@ class Processor(MFCBase):
 
     # endregion
 
+    # region RTI
+    def handleRTI(self):
+
+        # Restore the stack pointer from stack.
+        self.pf = self.popstack8()
+
+        # Restor the program counter form stack.
+        self.pc = self.popstack16()
+        
+    # endregion
+
     # region RTS
     def handleRTS(self):
 
@@ -2170,6 +2207,7 @@ class Processor(MFCBase):
     # region Instruction Set
     def loadinstructionset(self):
         self.instructions = {
+            0x00: self.handleBRK,
             0x01: self.handleORAindexedindirect,
             0x05: self.handleORAzeropage,
             0x06: self.handleASLzeropage,

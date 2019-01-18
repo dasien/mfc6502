@@ -12,6 +12,11 @@ class Memory(object):
         # Retrive value from memory address.
         return self._memmap[address]
 
+    def readtwobytes(self, address):
+
+        # Retrive the contents of address and address + 1.
+        return self._memmap[address] + (0x100 * self._memmap[address + 1])
+
     def writebyte(self, address, value):
 
         # Assign value to memory.
