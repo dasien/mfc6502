@@ -1,7 +1,6 @@
 from mfcbase import MFCBase
 
 
-#TODO: Need to handle in line comments after operand ex. LDA $01 ;This is a line comment
 class Assembler(MFCBase):
 
     def __init__(self, infile, outfile, startaddr=None, includecounter=False):
@@ -79,7 +78,6 @@ class Assembler(MFCBase):
 
                         # Check to see if this is a variable.
                         if sourceline[1] == "=" or sourceline[1] == ".EQU":
-
                             # This is a variable.  Add it to symbol table with address.
                             self.createvariable(sourceline)
 
@@ -176,7 +174,6 @@ class Assembler(MFCBase):
 
                     # Check to see if we should print the line.
                     if printlinedata:
-
                         # Write the data for the line and logging data.
                         self.writelinedata(opcodehex, operand)
 
@@ -446,8 +443,10 @@ class Assembler(MFCBase):
 
     def loadopcodes(self):
         self.opcodes = {
-            'ADC': {'IM': 0x69, 'ZP': 0x65, 'ZPX': 0x75, 'ABS': 0x6D, 'ABSX': 0x7D, 'ABSY': 0x79, 'INDX': 0x61, 'INDY': 0x71},
-            'AND': {'IM': 0x29, 'ZP': 0x25, 'ZPX': 0x35, 'ABS': 0x2D, 'ABSX': 0x3D, 'ABSY': 0x39, 'INDX': 0x21, 'INDY': 0x31},
+            'ADC': {'IM': 0x69, 'ZP': 0x65, 'ZPX': 0x75, 'ABS': 0x6D, 'ABSX': 0x7D, 'ABSY': 0x79, 'INDX': 0x61,
+                    'INDY': 0x71},
+            'AND': {'IM': 0x29, 'ZP': 0x25, 'ZPX': 0x35, 'ABS': 0x2D, 'ABSX': 0x3D, 'ABSY': 0x39, 'INDX': 0x21,
+                    'INDY': 0x31},
             'ASL': {'ZP': 0x06, 'ZPX': 0x16, 'ABS': 0x0E, 'ABSX': 0x1E, 'ACC': 0x0A},
             'BIT': {'ZP': 0x24, 'ABS': 0x2C},
             'BPL': {'REL': 0x10},
@@ -459,11 +458,13 @@ class Assembler(MFCBase):
             'BNE': {'REL': 0xD0},
             'BEQ': {'REL': 0xF0},
             'BRK': {'IMP': 0x00},
-            'CMP': {'IM': 0xC9, 'ZP': 0xC5, 'ZPX': 0xD5, 'ABS': 0xCD, 'ABSX': 0xDD, 'ABSY': 0xD9, 'INDX': 0xC1, 'INDY': 0xD1},
+            'CMP': {'IM': 0xC9, 'ZP': 0xC5, 'ZPX': 0xD5, 'ABS': 0xCD, 'ABSX': 0xDD, 'ABSY': 0xD9, 'INDX': 0xC1,
+                    'INDY': 0xD1},
             'CPX': {'IM': 0xE0, 'ZP': 0xD4, 'ABS': 0xEC},
             'CPY': {'IM': 0xC0, 'ZP': 0xC4, 'ABS': 0xCC},
             'DEC': {'ZP': 0xC6, 'ZPX': 0xD6, 'ZPY': 0xCE, 'ABS': 0xDC},
-            'EOR': {'IM': 0x49, 'ZP': 0x45, 'ZPX': 0x55, 'ABS': 0x4D, 'ABSX': 0x5D, 'ABSY': 0x59, 'INDX': 0x41, 'INDY': 0x51},
+            'EOR': {'IM': 0x49, 'ZP': 0x45, 'ZPX': 0x55, 'ABS': 0x4D, 'ABSX': 0x5D, 'ABSY': 0x59, 'INDX': 0x41,
+                    'INDY': 0x51},
             'CLC': {'IMP': 0x18},
             'SEC': {'IMP': 0x38},
             'CLI': {'IMP': 0x58},
@@ -474,12 +475,14 @@ class Assembler(MFCBase):
             'INC': {'ZP': 0xE6, 'ZPX': 0xF6, 'ABS': 0xEE, 'ABSX': 0xFE},
             'JMP': {'ABS': 0x4C, 'IND': 0x6C},
             'JSR': {'ABS': 0x20},
-            'LDA': {'IM': 0xA9, 'ZP': 0xA5, 'ZPX': 0xB5, 'ABS': 0xAD, 'ABSX': 0xBD, 'ABSY': 0xB9, 'INDX': 0xA1, 'INDY': 0xB1},
+            'LDA': {'IM': 0xA9, 'ZP': 0xA5, 'ZPX': 0xB5, 'ABS': 0xAD, 'ABSX': 0xBD, 'ABSY': 0xB9, 'INDX': 0xA1,
+                    'INDY': 0xB1},
             'LDX': {'IM': 0xA2, 'ZP': 0xA6, 'ZPY': 0xB6, 'ABS': 0xAE, 'ABSY': 0xBE},
             'LDY': {'IM': 0xA0, 'ZP': 0xA4, 'ZPX': 0xB4, 'ABS': 0xAC, 'ABSX': 0xBC},
             'LSR': {'ZP': 0x46, 'ZPX': 0x56, 'ABS': 0x4E, 'ABSX': 0x5E},
             'NOP': {'IMP': 0xEA},
-            'ORA': {'IM': 0x09, 'ZP': 0x05, 'ZPX': 0x15, 'ABS': 0x0D, 'ABSX': 0x1D, 'ABSY': 0x19, 'INDX': 0x01, 'INDY': 0x11},
+            'ORA': {'IM': 0x09, 'ZP': 0x05, 'ZPX': 0x15, 'ABS': 0x0D, 'ABSX': 0x1D, 'ABSY': 0x19, 'INDX': 0x01,
+                    'INDY': 0x11},
             'TAX': {'IMP': 0xAA},
             'TXA': {'IMP': 0x8A},
             'DEX': {'IMP': 0xCA},
@@ -492,7 +495,8 @@ class Assembler(MFCBase):
             'ROR': {'ZP': 0x66, 'ZPX': 0x76, 'ABS': 0x6E, 'ABSX': 0x7E, 'ACC': 0x6A},
             'RTI': {'IMP': 0x40},
             'RTS': {'IMP': 0x60},
-            'SBC': {'IM': 0xE9, 'ZP': 0xE5, 'ZPX': 0xF5, 'ABS': 0xED, 'ABSX': 0xFD, 'ABSY': 0xF9, 'INDX': 0xE1, 'INDY': 0xF1},
+            'SBC': {'IM': 0xE9, 'ZP': 0xE5, 'ZPX': 0xF5, 'ABS': 0xED, 'ABSX': 0xFD, 'ABSY': 0xF9, 'INDX': 0xE1,
+                    'INDY': 0xF1},
             'STA': {'ZP': 0x85, 'ZPX': 0x95, 'ABS': 0x8D, 'ABSX': 0x9D, 'ABSY': 0x99, 'INDX': 0x81, 'INDY': 0x91},
             'TXS': {'IMP': 0x9A},
             'TSX': {'IMP': 0x8A},
@@ -503,5 +507,3 @@ class Assembler(MFCBase):
             'STX': {'ZP': 0x86, 'ZPY': 0x96, 'ABS': 0x8E},
             'STY': {'ZP': 0x84, 'ZPX': 0x94, 'ABS': 0x8C}
         }
-
-

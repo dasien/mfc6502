@@ -4,6 +4,18 @@ from mfcbase import MFCBase
 
 
 class Processor(MFCBase):
+    COMMANDS = """
+    c = show cpu state
+    e = execute next instruction
+    f = continue (free run)
+    h = print this list of commands
+    m = dump memory contents (m@address ex. m@C004)
+    p = print current instruction
+    r = reset cpu
+    s = dump stack
+    t = halt program
+    z = dump zero page
+    """
 
     def __init__(self, infile, outfile, startaddr, includecounter, verbose):
 
@@ -19,6 +31,12 @@ class Processor(MFCBase):
         self.instructions = None
         self.verbose = verbose
         self.endaddress = 0
+
+        # Flag to keep stepping through program (for debugging).
+        self.nextstep = True
+
+        # Flag to switch off command request (for debugging).
+        self.stopbetweensteps = True
 
         # Load the allowable instructions.
         self.loadinstructionset()
@@ -39,11 +57,6 @@ class Processor(MFCBase):
         self.pc = startaddr
 
     # region CPU Control
-
-    def loadmemory(self, startaddress, data):
-
-        # Load the data into memory.
-        return self._memory.load(startaddress, data)
 
     def reset(self):
 
@@ -73,36 +86,98 @@ class Processor(MFCBase):
                    format(str(self._memory.readbyte(addrhigh)), '02X')))
             return False
 
-    # def singlestep(self):
+    def run(self, singlestep):
 
-    def freerun(self):
+        # Assign the single step value.
+        self.stopbetweensteps = singlestep
 
         # Begin message.
         self.writeheadermessage()
 
         # Loop through the code that is loaded in memory.
-        while self.pc < self.endaddress:
+        while self.pc < self.endaddress and self.nextstep:
 
-            # Fetch the first instruction.
-            opcode = self._memory.readbyte(self.pc)
+            # Check to see if we are in free run mode.
+            if self.stopbetweensteps:
 
-            # Get the command from the supported opcodes.
-            instruction = self.instructions[opcode]
+                # Show the interactive debugger.
+                self.showdebugger()
 
-            # Increment program counter.
-            self.pc += 1
+            # We are in free run mode.
+            else:
 
-            # Execute instruction.
-            instruction()
+                # Execute the next operation.
+                self.executestep()
 
         # End message.
         self.writefootermessage()
-        self._memory.dump(0x04, 0xFF)
+
+    def executestep(self):
+
+        # Fetch the first instruction.
+        opcode = self._memory.readbyte(self.pc)
+
+        # Get the command from the supported opcodes.
+        instruction = self.instructions[opcode]
+
+        # Increment program counter.
+        self.pc += 1
+
+        # Execute instruction.
+        instruction()
+
+    def showdebugger(self):
+
+        # Get input from user.
+        command = input("Enter Debugger Command (h for list of commands):").lower()
+
+        # Process user command.
+        if command[0] == 'c':
+            # Print CPU state.
+            self.showcpustate()
+
+        elif command[0] == 'e':
+            # Execute steps stopping between steps.
+            self.executestep()
+
+        elif command[0] == 'f':
+            # Switch to free run mode.
+            self.stopbetweensteps = False
+
+        elif command[0] == 'h':
+            # Print list of commands.
+            print(self.COMMANDS)
+
+        elif command[0] == 'm':
+            # Get the address.
+            addr = int(command[2:], 16)
+
+            # Print the value of that address.
+            print("Value at address %04x is %02x" % (addr, self._memory.readbyte(addr)))
+
+        elif command[0] == 'p':
+            # Get the current byte.
+            opcode = self._memory.readbyte(self.pc)
+
+            # Print the opcode.
+            print("Current opcode: %02x" % opcode)
+
+        elif command[0] == 's':
+            # Print stack memory.
+            self.dumpstack()
+
+        elif command[0] == 't':
+            # End execution.
+            self.nextstep = False
+
+        elif command[0] == 'z':
+            # Print zero page memory.
+            self.dumpzeropage()
 
     def showcpustate(self):
 
         # Get string versions of the byte values.
-        str_pc = self.onebytetostring(self.pc)
+        str_pc = self.twobytestostring(self.pc)
         str_a = self.onebytetostring(self.a)
         str_x = self.onebytetostring(self.x)
         str_y = self.onebytetostring(self.y)
@@ -112,15 +187,32 @@ class Processor(MFCBase):
         print("PC:" + str_pc + " A:" + str_a + " X:" + str_x + " Y:" + str_y + " SP:" + str_sp + " Flags:" + str_pf +
               " CPU Cycles:" + str(self.cy))
 
+    def dumpzeropage(self):
+
+        # Print the zero page memory contents.
+        self._memory.dump(0x00, 0xFF)
+
+    def dumpstack(self):
+
+        # Print stack contents.
+        self._memory.dump(0x0100, 0xFF)
+
+    def loadmemory(self, startaddress, data):
+
+        # Load the data into memory.
+        return self._memory.load(startaddress, data)
+
     # endregion
 
     # region Helper Methods
 
     def writeheadermessage(self):
+        print(";;;;;;;;;;;;;;;;;;;;;;;;;")
         print("; Execution Begins: %s" % datetime.now())
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
 
     def writefootermessage(self):
+        print(";;;;;;;;;;;;;;;;;;;;;;;;;")
         print("; Execution Ends: %s" % datetime.now())
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
 
@@ -759,6 +851,9 @@ class Processor(MFCBase):
 
         # Load the pc with the inturrupt address vector contents.
         self.pc = self._memory.readtwobytes(Vectors.IRQ_ADDR_LOW)
+
+        # Enter debugger.
+        self.showdebugger()
 
     # endregion
 
@@ -1675,7 +1770,7 @@ class Processor(MFCBase):
         # Update cycle counter.
         self.cy += 4
 
-    #endregion
+    # endregion
 
     # region PLP
     def handlePLP(self):
@@ -1683,7 +1778,7 @@ class Processor(MFCBase):
         # Set processor flags from stack value.
         self.pf = self.popstack8()
 
-    #endregion
+    # endregion
 
     # region ROL
     def handleROLaccumulator(self):
@@ -1849,7 +1944,7 @@ class Processor(MFCBase):
 
         # Restor the program counter form stack.
         self.pc = self.popstack16()
-        
+
     # endregion
 
     # region RTS

@@ -1,3 +1,5 @@
+  .ORG $1000
+
   JSR init
   JSR loop
   JSR end

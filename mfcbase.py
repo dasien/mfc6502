@@ -1,5 +1,3 @@
-
-
 class MFCBase(object):
 
     def __init__(self, infile, outfile, startaddr=None, includecounter=False):

@@ -89,7 +89,7 @@ try:
         handler = Processor(infile, outfile, intval, args.counter, args.debug)
 
         # Execute code.
-        handler.freerun()
+        handler.singlestep()
         handler.showcpustate()
         # handler.disassemble()
 
