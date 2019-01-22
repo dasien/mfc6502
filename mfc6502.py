@@ -89,9 +89,8 @@ try:
         handler = Processor(infile, outfile, intval, args.counter, args.debug)
 
         # Execute code.
-        handler.singlestep()
+        handler.run(True)
         handler.showcpustate()
-        # handler.disassemble()
 
     # Close the files.
     infile.close()

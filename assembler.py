@@ -1,6 +1,7 @@
 from mfcbase import MFCBase
 
 
+# TODO: Need to remove all the file position parsing in favor of tokens.
 class Assembler(MFCBase):
 
     def __init__(self, infile, outfile, startaddr=None, includecounter=False):
@@ -37,7 +38,7 @@ class Assembler(MFCBase):
             for sourceline in super(Assembler, self).sourcelines:
 
                 # Check to see if this is a program counter.
-                if not self.setprogramcounter(sourceline[0]):
+                if not self.setprogramcounter(sourceline):
 
                     # Check to see if we have a label at the first part of line.
                     if sourceline[0] in super(Assembler, self).opcodes:
@@ -106,7 +107,7 @@ class Assembler(MFCBase):
                 printlinedata = True
 
                 # Check to see if this is a program counter.
-                if not self.setprogramcounter(sourceline[0]):
+                if not self.setprogramcounter(sourceline):
 
                     # Variables for discrete parts.
                     opcodehex = None
@@ -306,7 +307,7 @@ class Assembler(MFCBase):
             retval = True
 
         # Handle the .ORG directive.
-        elif line[0:4] == ".ORG":
+        elif line[0] == ".ORG":
             val = line[1][1:]
             retval = True
 
