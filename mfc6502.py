@@ -3,7 +3,7 @@ from assembler import Assembler
 from disassembler import Disassembler
 from processor import Processor
 
-app_version = "1.00"
+app_version = "1.23"
 
 parser = argparse.ArgumentParser(usage="%(prog)s -[adegv] -i infile -o outfile [-s 0xADDR] [-c]",
                                  description="6502 Assembler/Disassembler/Simulator")
@@ -12,7 +12,7 @@ parser.add_argument("-a", "--assemble", action="store_true", dest="assemble", de
 parser.add_argument("-d", "--disassemble", action="store_true", dest="disassemble", default=False,
                     help="Disassemble the code in infile and put the disassembled code in outfile")
 parser.add_argument("-e", "--execute", action="store_true", dest="execute", default=False,
-                    help="Execute the assembled code in infile.  The result of the execution will be placed in outfile.")
+                    help="Execute the assembled code in infile.  The run results will be placed in outfile.")
 parser.add_argument("-g", "--debug", action="store_true", dest="debug", default=False,
                     help="Debug the code in infile and put the debug output in outfile")
 parser.add_argument("-v", "--version", action="version", version="%(prog)s " + app_version)
@@ -89,7 +89,7 @@ try:
         handler = Processor(infile, outfile, intval, args.counter, args.debug)
 
         # Execute code.
-        handler.run(True)
+        handler.run(args.debug)
         handler.showcpustate()
 
     # Close the files.

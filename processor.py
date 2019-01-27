@@ -27,9 +27,17 @@ class Processor(MFCBase):
         self.sp = 0x01FF
         self.pf = 0x00
         self.cy = 0
+
+        # 64k RAM.
         self.maxmemory = 65536
+
+        # The table of opcodes and their execution handlers.
         self.instructions = None
+
+        # TODO: write information to output file.
         self.verbose = verbose
+
+        # The end address of the loaded program.
         self.endaddress = 0
 
         # Flag to keep stepping through program (for debugging).
