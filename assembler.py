@@ -8,6 +8,11 @@ class Assembler(MFCBase):
 
         # Labels are supported.
         self.__labels = dict()
+
+        # So are directives.
+        self.__directives = dict()
+
+        # Default program counter.
         self.pc = 0x0000
 
         # Superclass init.
@@ -441,6 +446,39 @@ class Assembler(MFCBase):
                 retval = retval[2:] + " " + retval[:2]
 
         return retval
+
+    def handleStart(self):
+        pass
+
+    def handleByte(self):
+        pass
+
+    def handleASCII(self):
+        pass
+
+    def handleWord(self):
+        pass
+
+    def handleEnd(self):
+        pass
+
+    def loaddirectives(self):
+        self.__directives = {
+            '.org': self.handleStart,
+            'org': self.handleStart,
+            '*=': self.handleStart,
+            '.byte':  self.handleByte,
+            '.db': self.handleByte,
+            'db': self.handleByte,
+            '.ascii': self.handleASCII,
+            '.tx': self.handleASCII,
+            'tx': self.handleASCII,
+            '.word': self.handleWord,
+            '.dw': self.handleWord,
+            'dw': self.handleWord,
+            '.end': self.handleEnd,
+            'end': self.handleEnd
+        }
 
     def loadopcodes(self):
         self.opcodes = {
