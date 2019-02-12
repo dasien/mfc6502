@@ -1,5 +1,5 @@
 from mfcbase import MFCBase
-
+from token import Token
 
 # TODO: Need to remove all the file position parsing in favor of tokens.
 class Assembler(MFCBase):
@@ -11,6 +11,9 @@ class Assembler(MFCBase):
 
         # So are directives.
         self.__directives = dict()
+
+        # Pointer to current character in file.
+        self.__linepos = 0
 
         # Default program counter.
         self.pc = 0x0000
@@ -26,11 +29,53 @@ class Assembler(MFCBase):
         # Parse the input file.
         self.parse()
 
+        # Loop through each line.
+        for sourceline in  super(Assembler, self).sourcelines:
+
+            # Get the current token.
+            token = self.gettoken()
+
+                # Loop through each character in the line.
+                while token.type != token.EOL:
+
         # Create the lookup table for labels/variables.
         self.buildsymboltable()
 
         # Parse the commands into hex codes.
         self.parsecommands()
+
+    def gettoken(self, line):
+
+        retVal = Token.__init__()
+
+        # Check to see if we are at the end of the line.
+        if self.__linepos >= len(line):
+
+            # Set token type.
+            retVal.type = Token.EOL
+
+        else:
+
+            # Get the current character.
+            currentchar = line[self.__linepos]
+
+            # Check to see if this is a whitespace char.
+            while currentchar.isspace():
+
+                # Advance pointer.
+                self.__linepos += 1
+
+                # Check to see if we are at the end of the line.
+                if self.__linepos >= len(line):
+
+                    # Set token type.
+                    retVal.type = Token.EOL
+
+                else:
+
+                    # Get next character.
+                    currentchar = line[self.__linepos]
+
 
     def buildsymboltable(self):
 
