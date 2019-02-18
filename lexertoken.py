@@ -1,4 +1,4 @@
-class Token(object):
+class LexerToken(object):
 
     # Token types.
     EOL = 0
@@ -16,7 +16,7 @@ class Token(object):
     DOT = 12
     COLON = 13
     EQUAL = 14
-    STAR = 15
+    ASTERISK = 15
     PLUS = 16
     MINUS = 17
     LPAREN = 18

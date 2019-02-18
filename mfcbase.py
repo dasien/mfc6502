@@ -14,34 +14,34 @@ class MFCBase(object):
         else:
             self.__pc = startaddr
 
-    def splitline(self, line):
-
-        pos = 0
-
-        # Trim line to remove tabs, etc.
-        line = line.strip()
-
-        # Convert line to upper case (in case the developer didn't).
-        line = line.upper()
-
-        # Split into parts based on spaces.
-        lineparts = line.split()
-
-        # Loop throught the line part list.
-        for part in lineparts:
-
-            # Check to see if we have an inline comment
-            if part[0] == ";":
-
-                # Remove from this token to the end of line
-                del lineparts[pos:len(lineparts)]
-                break
-
-            else:
-                # Increment position counter.
-                pos += 1
-
-        return lineparts
+    # def splitline(self, line):
+    #
+    #     pos = 0
+    #
+    #     # Trim line to remove tabs, etc.
+    #     line = line.strip()
+    #
+    #     # Convert line to upper case (in case the developer didn't).
+    #     line = line.upper()
+    #
+    #     # Split into parts based on spaces.
+    #     lineparts = line.split()
+    #
+    #     # Loop throught the line part list.
+    #     for part in lineparts:
+    #
+    #         # Check to see if we have an inline comment
+    #         if part[0] == ";":
+    #
+    #             # Remove from this token to the end of line
+    #             del lineparts[pos:len(lineparts)]
+    #             break
+    #
+    #         else:
+    #             # Increment position counter.
+    #             pos += 1
+    #
+    #     return lineparts
 
     def writeline(self, value):
 
@@ -65,22 +65,26 @@ class MFCBase(object):
 
                 line = line.strip()
 
+                # Convert line to upper case (in case the developer didn't).
+                line = line.upper()
+
                 # Check to see if this is a blank line.
                 if not line.strip() or line[0] in ";":
 
                     # Skip the line.
                     continue
 
-                else:
+                # else:
+                #
+                #     # Split the line up into parts.
+                #     lineparts = self.splitline(line)
+                #
+                #     # Loop through the line parts to make sure there are no trailing colons.
+                #     lineparts[0] = lineparts[0].rstrip(':')
+                #
 
-                    # Split the line up into parts.
-                    lineparts = self.splitline(line)
-
-                    # Loop through the line parts to make sure there are no trailing colons.
-                    lineparts[0] = lineparts[0].rstrip(':')
-
-                    # Add to source list.
-                    self.__sourcelines.append(lineparts)
+                # Add to source list.
+                self.__sourcelines.append(line)
 
             # Report lines parsed.
             print("Finishing parsing %s source lines..." % len(self.__sourcelines))

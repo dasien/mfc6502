@@ -1,5 +1,6 @@
 from mfcbase import MFCBase
-from token import Token
+from lexertoken import LexerToken
+
 
 # TODO: Need to remove all the file position parsing in favor of tokens.
 class Assembler(MFCBase):
@@ -14,6 +15,15 @@ class Assembler(MFCBase):
 
         # Pointer to current character in file.
         self.__linepos = 0
+
+        # Temp string storage.
+        self.__currentstring = ''
+
+        # Used to backup one token.
+        self.__oldtoken = None
+
+        # Two pass assembler.
+        self._pass = 0
 
         # Default program counter.
         self.pc = 0x0000
@@ -30,13 +40,32 @@ class Assembler(MFCBase):
         self.parse()
 
         # Loop through each line.
-        for sourceline in  super(Assembler, self).sourcelines:
+        for sourceline in super(Assembler, self).sourcelines:
+
+            # The values that will be printed.
+            opcodehex = 0
+            operand = 0
+
+            # Reset line position counter.
+            self.__linepos = 0
 
             # Get the current token.
-            token = self.gettoken()
+            token = self.gettoken(sourceline)
 
-                # Loop through each character in the line.
-                while token.type != token.EOL:
+            # Loop through each character in the line.
+            while token.type != LexerToken.EOL:
+
+                # print the token type.
+                print("Found token type: %s with value %s" % (token.type, token.value))
+
+                # Check to see if we have an opcode.
+                if token.type == LexerToken.OPCODE:
+
+                    # Calculate the operand for this opcode.
+                    opcodehex, operand = self.getoperand(sourceline, token.value)
+
+                # Write the data to the file.
+                self.writelinedata(opcodehex, operand)
 
         # Create the lookup table for labels/variables.
         self.buildsymboltable()
@@ -46,39 +75,373 @@ class Assembler(MFCBase):
 
     def gettoken(self, line):
 
-        retVal = Token.__init__()
+        retval = LexerToken(None, None)
 
-        # Check to see if we are at the end of the line.
-        if self.__linepos >= len(line):
+        # First check to see if we need to return the previous token.
+        if self.__oldtoken is not None:
 
-            # Set token type.
-            retVal.type = Token.EOL
+            # Set the return value to this token.
+            retval = self.__oldtoken
+
+            # Reset old token.
+            self.__oldtoken = None
 
         else:
 
-            # Get the current character.
-            currentchar = line[self.__linepos]
+            # Check to see if we are at the end of the line.
+            if self.__linepos >= len(line):
 
-            # Check to see if this is a whitespace char.
-            while currentchar.isspace():
+                # Set token type.
+                retval.type = LexerToken.EOL
 
-                # Advance pointer.
-                self.__linepos += 1
+            else:
 
-                # Check to see if we are at the end of the line.
-                if self.__linepos >= len(line):
+                # Get the current character.
+                currentchar = line[self.__linepos]
 
-                    # Set token type.
-                    retVal.type = Token.EOL
+                # Check to see if this is a whitespace char.
+                while currentchar.isspace():
 
-                else:
+                    # Advance pointer.
+                    self.__linepos += 1
+
+                    # Check to see if we are at the end of the line.
+                    if self.__linepos >= len(line):
+                        # Set token type.
+                        retval.type = LexerToken.EOL
 
                     # Get next character.
                     currentchar = line[self.__linepos]
 
+                # Comment.
+                if currentchar == ';':
+                    self.__linepos = len(line)
+                    retval.type = LexerToken.EOL
+
+                # Literal integer value.
+                elif currentchar == '#':
+                    retval.type = LexerToken.HASH
+
+                # Indirect/Indexed.
+                elif currentchar == '(':
+                    retval.type = LexerToken.LPAREN
+
+                # Indirect/Indexed.
+                elif currentchar == ')':
+                    retval.type = LexerToken.RPAREN
+
+                # Separator for data list or indirect/indexed.
+                elif currentchar == ',':
+                    retval.type = LexerToken.COMMA
+
+                # Expression/Address adjustment.
+                elif currentchar == '+':
+                    retval.type = LexerToken.PLUS
+
+                # Expression/Address adjustment
+                elif currentchar == '-':
+                    retval.type = LexerToken.MINUS
+
+                # Assignment.
+                elif currentchar == '=':
+                    retval.type = LexerToken.EQUAL
+
+                # Program counter.
+                elif currentchar == '*':
+                    retval.type = LexerToken.ASTERISK
+
+                # Label ending (sometimes).
+                elif currentchar == ':':
+                    retval.type = LexerToken.COLON
+
+                # High byte notation.
+                elif currentchar == '<':
+                    retval.type = LexerToken.LANGLE
+
+                # Low byte notation.
+                elif currentchar == '>':
+                    retval.type = LexerToken.RANGLE
+
+                # Square bracket.
+                elif currentchar == '[':
+                    retval.type = LexerToken.LSQUARE
+
+                # Close bracket.
+                elif currentchar == ']':
+                    retval.type = LexerToken.RSQUARE
+
+                # Start of hex number.
+                elif currentchar == '$':
+
+                    # Increment counter to get to number.
+                    self.__linepos += 1
+
+                    # Parse the hex number.
+                    retval.value = self.getnumber(16, line)
+                    retval.type = LexerToken.INTEGER
+
+                # Start of decimal number.
+                elif currentchar.isdigit():
+                    retval.value = self.getnumber(10, line)
+                    retval.type = LexerToken.INTEGER
+
+                # Alpha character.
+                elif currentchar.isalpha():
+
+                    # String buffer.
+                    tmpstr = []
+
+                    # Collect all consecutive chars.
+                    while currentchar.isalnum():
+
+                        # Append the current char.
+                        tmpstr.append(currentchar)
+
+                        # Increment pointer.
+                        self.__linepos += 1
+
+                        # Check to see if we are at the end of the line.
+                        if self.__linepos == len(line):
+                            break
+
+                        # Append next char.
+                        currentchar = line[self.__linepos]
+
+                    # Concat string.
+                    self.__currentstring = ''.join(tmpstr)
+
+                    # Check to see if we have an instruction.
+                    if self.__currentstring in self.opcodes:
+                        retval.value = self.__currentstring
+                        retval.type = LexerToken.OPCODE
+
+                    # Accumulator addressing.
+                    elif self.__currentstring == "A":
+                        retval.type = LexerToken.ACC
+
+                    # X indexed addressing.
+                    elif self.__currentstring == "X":
+                        retval.type = LexerToken.XREG
+
+                    # Y indexed addressing.
+                    elif self.__currentstring == "Y":
+                        retval.type = LexerToken.YREG
+
+                    # This is a label.
+                    else:
+                        retval.value = self.__currentstring
+                        retval.type = LexerToken.LABEL
+
+            # Increment counter.
+            self.__linepos += 1
+
+        # Return token.
+        return retval
+
+    def getnumber(self, base, line):
+
+        retval = 0
+
+        # Make sure we don't go past end of line.
+        while self.__linepos < len(line):
+
+            # Get the character.
+            currentchar = line[self.__linepos]
+
+            # Check to see if this is a digit
+            if currentchar.isdigit():
+
+                # Calculate base 10 value of ASCII digit. (48 is ASCII 0)
+                retval = (retval * base) + ord(currentchar) - 48
+
+            # Check to see if this is a hex digit.
+            elif 'A' >= currentchar <= 'F' and base == 16:
+
+                # Calculate base 16 value of ASCII character (65 is ASCII A)
+                retval = (retval * base) + (ord(currentchar) - 65) + 10
+
+            else:
+                break
+
+            # Increment position.
+            self.__linepos += 1
+
+        return retval
+
+    def getoperand(self, line, opcode):
+
+        # Return values.
+        opcodehex = 0
+        operand = 0
+
+        # Get the next token.
+        token = self.gettoken(line)
+
+        # Based on the token, we can determine the base addressing type.
+        if token.type == LexerToken.HASH:
+
+            # This is a literal decimal or hex value.
+            operand = self.parseterm(line, -128, 255)
+            opcodehex = self.opcodes[opcode]['IM']
+
+        elif token.type == LexerToken.ACC:
+
+            # This opcode is taking the accumulator as the operand.
+            operand = None
+            opcodehex = self.opcodes[opcode]['ACC']
+
+        # If we have an integer, just need to determine between zero page and absolute (including x/y indexing).
+        if token.type == LexerToken.INTEGER:
+
+            # Set the operand value.
+            operand = token.value
+
+            # Check to see if this is indexed addressing.
+            if self.gettoken(line) != LexerToken.COMMA:
+
+                # If the operand is less than 256, it is zero page addressing.
+                if token.value <= 0xFF:
+
+                    # Get the opcode hex value.
+                    opcodehex = self.opcodes[opcode]['ZP']
+
+                else:
+
+                    # Get the opcode hex value.
+                    opcodehex = self.opcodes[opcode]['ABS']
+            else:
+
+                # If we saw the comma, need to see if it is X or Y indexed addressing.
+                token = self.gettoken(line)
+
+                # X indexing.
+                if token.type == LexerToken.XREG:
+
+                    # If the operand is less than 256, it is zero page addressing.
+                    if token.value <= 0xFF:
+
+                        # Get the opcode hex value.
+                        opcodehex = self.opcodes[opcode]['ZPX']
+
+                    else:
+
+                        # Get the opcode hex value.
+                        opcodehex = self.opcodes[opcode]['ABSX']
+
+                # Y indexing.
+                elif token.type == LexerToken.YREG:
+
+                    # If the operand is less than 256, it is zero page addressing.
+                    if token.value <= 0xFF:
+
+                        # Get the opcode hex value.
+                        opcodehex = self.opcodes[opcode]['ZPY']
+
+                    else:
+
+                        # Get the opcode hex value.
+                        opcodehex = self.opcodes[opcode]['ABSY']
+                else:
+
+                    self.error("Unknown address syntax")
+
+            print("Operand:{0} Opcodehex {1}".format(operand, opcodehex))
+
+        # Return the opcode hex and operand.
+        return opcodehex, operand
+
+    def parseterm(self, line, minvalue, maxvalue):
+
+        # Generate the factors for this operand.
+        retval = self.parsefactor1(line)
+
+        # Check to see that we are in the bounds for the call.
+        if retval is not None and (retval < minvalue or retval > maxvalue):
+
+            # Set retval to none.
+            retval = None
+
+        # Return the term.
+        return retval
+
+    def parsefactor1(self, line):
+        value = self.parsefactor2(line)
+        while value is not None:
+            token = self.gettoken(line)
+            if token.type == LexerToken.PLUS:
+                value2 = self.parsefactor2(line)
+                if value2 is None:
+                    break
+                value = value + value2
+                continue
+            if token.type == LexerToken.MINUS:
+                value2 = self.parsefactor2(line)
+                if value2 is None:
+                    break
+                value = value - value2
+                continue
+            self.__oldtoken = token
+            break
+        return value
+
+    def parsefactor2(self, line):
+        value = self.parsenumber(line)
+        while value is not None:
+            token = self.gettoken(line)
+            if token.type == LexerToken.ASTERISK:
+                value2 = self.parsenumber(line)
+                if value2 is None:
+                    break
+                value = value * value2
+                continue
+            self.__oldtoken = token
+            break
+        return value
+
+    def parsenumber(self, line):
+        neg = 1
+        value = None
+        token = self.gettoken(line)
+        if token.type == LexerToken.ASTERISK:
+            return self.pc
+        if token.type == LexerToken.LSQUARE:
+            value = self.parsefactor1(line)
+            if self.gettoken(line) != LexerToken.RSQUARE:
+                self.error("Missing ]")
+            return value
+        if token.type == LexerToken.LANGLE:
+            value = self.parsenumber(line)
+            return value & 0xFF if value is not None else value
+        if token.type == LexerToken.RANGLE:
+            value = self.parsenumber(line)
+            return (value >> 8) & 0xFF if value is not None else value
+        if token.type == LexerToken.MINUS:
+            token = self.gettoken(line)
+            neg = -1
+        if token.type == LexerToken.PLUS:
+            token = self.gettoken(line)
+            neg = 1
+        if token.type == LexerToken.LABEL:
+            if self.__currentstring in self.__labels:
+                value = self.__labels[self.__currentstring]
+                token.type = LexerToken.INTEGER
+            elif self._pass == 1:
+                value = 0x100
+            else:
+                self.error("Undefined label: " + self.__currentstring)
+        elif token.type == LexerToken.INTEGER and token.value is not None:
+            value = token.value
+        elif token.type == LexerToken.STRING and len(self.__currentstring) == 1:
+            value = ord(self.__currentstring[0])
+        else:
+            self.error("Value expected")
+        return value if value is None else value * neg
+
+    def error(self, errmsg):
+        if self._pass == 2:
+            print("PY6502: {0} : error: {1}".format(self.infile, errmsg))
 
     def buildsymboltable(self):
-
         try:
 
             # A temporary program counter.
@@ -147,7 +510,6 @@ class Assembler(MFCBase):
             print("Error building symbols table.")
 
     def parsecommands(self):
-
         try:
 
             # Loop through file.
@@ -238,7 +600,6 @@ class Assembler(MFCBase):
             print("Error in command parsing.")
 
     def writelinedata(self, opcodehex, operand):
-
         # Handle blank operands.
         if operand is None:
             # Make it blank.
@@ -248,18 +609,19 @@ class Assembler(MFCBase):
         self.incrementbyteswritten(operand)
 
         if self.includecounter:
+
             # Format the ouptut.
-            outline = "%s %s %s" % (format(self.pc, '04X'), format(opcodehex, '02X'), operand)
+            outline = "{:04x} {:02x} {:02x}".format(self.pc, opcodehex, operand)
 
         else:
+
             # Format the ouptut.
-            outline = "%s %s" % (format(opcodehex, '02X'), operand)
+            outline = "{:02x} {:02x}".format(opcodehex, operand)
 
         # Write current value for PC and hex for opcode and operand.
         self.writeline(outline)
 
     def createsymbol(self, sourceline):
-
         # Remove trailing colon if present.
         label = sourceline[0].rstrip(':')
 
@@ -277,7 +639,6 @@ class Assembler(MFCBase):
                 self.incrementprogramcounter(opcodelen)
 
     def resolvesymboldata(self, sourceline):
-
         # Get the hex value of the opcode and the length.
         if len(sourceline) == 2:
 
@@ -292,7 +653,6 @@ class Assembler(MFCBase):
         return opcodehex, opcodelen, operand
 
     def createvariable(self, sourceline):
-
         # Clean up any non address parts.
         address = sourceline[2].strip("<>(),")
 
@@ -300,7 +660,6 @@ class Assembler(MFCBase):
         self.__labels[sourceline[0]] = address
 
     def getopcodedata(self, opcode, operand):
-
         # Get the hex value of the opcode and the length.
         opcodehex, opcodelen = self.gethexvalueandlength(opcode, operand)
 
@@ -319,7 +678,6 @@ class Assembler(MFCBase):
         return opcodehex, opcodelen, formattedoperand
 
     def computebranchhex(self, currentaddress, branchtoaddress):
-
         # Stip out any formatting chars.
         branchtoaddress = branchtoaddress.strip("#$")
 
@@ -346,7 +704,6 @@ class Assembler(MFCBase):
         return formatted
 
     def setprogramcounter(self, line):
-
         # Return value.
         retval = False
         val = "0"
@@ -379,27 +736,24 @@ class Assembler(MFCBase):
         return retval
 
     def incrementprogramcounter(self, offset):
-
         # Add the offset.
         self.pc += offset
 
     def incrementbyteswritten(self, operand):
-
         # Just increment for opcode.
         self.bytecount += 1
 
-        if len(operand) == 2:
+        if operand <= 0xFF:
 
             # Increment for one byte operand.
             self.bytecount += 1
 
-        elif len(operand) == 5:
+        else:
 
             # Increment for two byte operand.
             self.bytecount += 2
 
     def gethexvalueandlength(self, opcode, operand):
-
         # Lookup opcode in table.
         command = super(Assembler, self).opcodes[opcode]
 
@@ -479,7 +833,6 @@ class Assembler(MFCBase):
         return hexcode, length
 
     def getoperandvalue(self, operand):
-
         # The return address.
         retval = None
 
@@ -512,7 +865,7 @@ class Assembler(MFCBase):
             '.org': self.handleStart,
             'org': self.handleStart,
             '*=': self.handleStart,
-            '.byte':  self.handleByte,
+            '.byte': self.handleByte,
             '.db': self.handleByte,
             'db': self.handleByte,
             '.ascii': self.handleASCII,
