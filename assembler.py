@@ -365,76 +365,161 @@ class Assembler(MFCBase):
         return retval
 
     def parsefactor1(self, line):
+
+        # Nested call to handle operator precedence.
         value = self.parsefactor2(line)
+
         while value is not None:
+
+            # Peek ahead to get the next token.
             token = self.gettoken(line)
+
+            #  Handle addition.
             if token.type == LexerToken.PLUS:
+
+                # Get the factor for the operation.  This allows for any multiplication to occur first.
                 value2 = self.parsefactor2(line)
-                if value2 is None:
+
+                if value2 is not None:
+
+                    # Do the math.
+                    value = value + value2
+
+                else:
                     break
-                value = value + value2
-                continue
-            if token.type == LexerToken.MINUS:
+
+            # Handle subtraction.
+            elif token.type == LexerToken.MINUS:
+
+                # Get the factor for the operation.  This allows for any multiplication to occur first.
                 value2 = self.parsefactor2(line)
-                if value2 is None:
+
+                if value2 is not None:
+
+                    # Do the math.
+                    value = value - value2
+
+                else:
                     break
-                value = value - value2
-                continue
+
+            # Put token back from look ahead.
             self.__oldtoken = token
+
             break
         return value
 
     def parsefactor2(self, line):
+
+        # Parse out the factor value.
         value = self.parsenumber(line)
+
         while value is not None:
+
+            # Peek ahead to get next token.
             token = self.gettoken(line)
+
+            # Handle multiplication.
             if token.type == LexerToken.ASTERISK:
+
+                # Parse next factor.
                 value2 = self.parsenumber(line)
-                if value2 is None:
+
+                if value2 is not None:
+
+                    # Do the math.
+                    value = value * value2
+
+                else:
                     break
-                value = value * value2
-                continue
+
+            # Put token back from look ahead.
             self.__oldtoken = token
             break
+
         return value
 
     def parsenumber(self, line):
         neg = 1
         value = None
+
+        # Get the next token.
         token = self.gettoken(line)
+
+        # This indicates a program counter offset.
         if token.type == LexerToken.ASTERISK:
-            return self.pc
-        if token.type == LexerToken.LSQUARE:
+
+            # Set value to program counter.
+            value = self.pc
+
+        elif token.type == LexerToken.LSQUARE:
+
+            # Get the value between the brackets.
             value = self.parsefactor1(line)
+
+            # Check to see if we have a close bracket.
             if self.gettoken(line) != LexerToken.RSQUARE:
                 self.error("Missing ]")
-            return value
-        if token.type == LexerToken.LANGLE:
+
+        # This is for LSB processing of 2 byte values.
+        elif token.type == LexerToken.LANGLE:
+
+            # Recursive call to get the value.
             value = self.parsenumber(line)
-            return value & 0xFF if value is not None else value
-        if token.type == LexerToken.RANGLE:
+
+            # Check to see if we have a value.
+            if value is not None:
+
+                # Send back just the LSB.
+                value = value & 0xFF
+
+        # This is for MSB processing of 2 byte values.
+        elif token.type == LexerToken.RANGLE:
+
+            # Recursive call to get the value.
             value = self.parsenumber(line)
-            return (value >> 8) & 0xFF if value is not None else value
-        if token.type == LexerToken.MINUS:
+
+            # Check to see if we have a value.
+            if value is not None:
+
+                # Send back just the MSB.
+                value = (value >> 8) & 0xFF
+
+        elif token.type == LexerToken.MINUS:
+
+            # Get the next token
             token = self.gettoken(line)
+
+            #
             neg = -1
-        if token.type == LexerToken.PLUS:
+
+        elif token.type == LexerToken.PLUS:
+
+            # Get the next token.
             token = self.gettoken(line)
             neg = 1
-        if token.type == LexerToken.LABEL:
+
+        elif token.type == LexerToken.LABEL:
+
             if self.__currentstring in self.__labels:
                 value = self.__labels[self.__currentstring]
                 token.type = LexerToken.INTEGER
+
             elif self._pass == 1:
                 value = 0x100
+
             else:
                 self.error("Undefined label: " + self.__currentstring)
+
         elif token.type == LexerToken.INTEGER and token.value is not None:
             value = token.value
+
         elif token.type == LexerToken.STRING and len(self.__currentstring) == 1:
             value = ord(self.__currentstring[0])
+
         else:
             self.error("Value expected")
+
+        # Return the generated value.
         return value if value is None else value * neg
 
     def error(self, errmsg):
