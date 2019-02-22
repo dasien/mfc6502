@@ -63,15 +63,16 @@ class Assembler(MFCBase):
 
                     # Calculate the operand for this opcode.
                     opcodehex, operand = self.getoperand(sourceline, token.value)
+                    token = self.gettoken(sourceline)
 
                 # Write the data to the file.
                 self.writelinedata(opcodehex, operand)
 
         # Create the lookup table for labels/variables.
-        self.buildsymboltable()
+        #self.buildsymboltable()
 
         # Parse the commands into hex codes.
-        self.parsecommands()
+        #self.parsecommands()
 
     def gettoken(self, line):
 
@@ -439,7 +440,7 @@ class Assembler(MFCBase):
         return value
 
     def parsenumber(self, line):
-        neg = 1
+        multiplier = 1
         value = None
 
         # Get the next token.
@@ -484,24 +485,32 @@ class Assembler(MFCBase):
                 # Send back just the MSB.
                 value = (value >> 8) & 0xFF
 
-        elif token.type == LexerToken.MINUS:
+        if token.type == LexerToken.PLUS:
 
-            # Get the next token
+            # Get the next token (should be the next factor).
             token = self.gettoken(line)
 
-            #
-            neg = -1
+            # The value should be positive.
+            multiplier = 1
 
-        elif token.type == LexerToken.PLUS:
+        if token.type == LexerToken.MINUS:
 
-            # Get the next token.
+            # Get the next token (should be the next factor).
             token = self.gettoken(line)
-            neg = 1
 
-        elif token.type == LexerToken.LABEL:
+            # The value should be negative.
+            multiplier = -1
 
+        # The factor is a label.
+        if token.type == LexerToken.LABEL:
+
+            # Check to see if the label is recorded already.
             if self.__currentstring in self.__labels:
+
+                # Get its value.
                 value = self.__labels[self.__currentstring]
+
+                # Change the type to numeric.
                 token.type = LexerToken.INTEGER
 
             elif self._pass == 1:
@@ -510,6 +519,7 @@ class Assembler(MFCBase):
             else:
                 self.error("Undefined label: " + self.__currentstring)
 
+        # This is just a numeric value.  Set the value accordingly.
         elif token.type == LexerToken.INTEGER and token.value is not None:
             value = token.value
 
@@ -520,7 +530,7 @@ class Assembler(MFCBase):
             self.error("Value expected")
 
         # Return the generated value.
-        return value if value is None else value * neg
+        return value if value is None else value * multiplier
 
     def error(self, errmsg):
         if self._pass == 2:

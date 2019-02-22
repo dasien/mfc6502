@@ -57,7 +57,7 @@ try:
         # Assemble file.
         handler.assemble()
 
-    if args.disassemble:
+    elif args.disassemble:
 
         # Check to see if a start address was added.
         if args.startaddr:
@@ -74,7 +74,7 @@ try:
         # Disassemble file.
         handler.disassemble()
 
-    if args.execute or args.debug:
+    elif args.execute or args.debug:
 
         # Check to see if a start address was added.
         if args.startaddr:
