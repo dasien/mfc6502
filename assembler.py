@@ -1,6 +1,6 @@
 from mfcbase import MFCBase
 from lexertoken import LexerToken
-
+import struct
 
 # TODO: Need to remove all the file position parsing in favor of tokens.
 class Assembler(MFCBase):
@@ -139,7 +139,7 @@ class Assembler(MFCBase):
                                 self.pc = value
 
                     # Check to see if we should write data.
-                    if self.__pass == 2:
+                    if self.__pass == 2 and opcodehex is not 0:
 
                         # Write the data to the file.
                         self.writelinedata(opcodehex, operand)
@@ -862,19 +862,27 @@ class Assembler(MFCBase):
         if self.includecounter:
 
             # Format the ouptut.
-            outline = "{:04x} {:02x}".format(self.pc, opcodehex)
+            outline = "{:04x} {:02x} ".format(self.pc, opcodehex)
 
         else:
 
             # Format the ouptut.
-            outline = "{:02x}".format(opcodehex)
+            outline = "{:02X} ".format(opcodehex)
 
         # Check to see if we have an operand.
         if operand is not None:
 
-            # Append operand.
-            outline += " {:02x}".format(operand)
-            
+            if operand < 256:
+
+                # Append operand.
+                outline += "{:02X}".format(operand)
+
+            else:
+                test = "{:04X}".format(operand)
+                test = test[2:] + test[:2]
+                # Append operand.
+                outline += test
+
         # Write current value for PC and hex for opcode and operand.
         self.writeline(outline)
 

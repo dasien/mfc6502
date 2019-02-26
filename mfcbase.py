@@ -47,9 +47,6 @@ class MFCBase(object):
 
         try:
 
-            # Clean up case.
-            value = value.upper()
-
             # Append a CR to the line.
             value += "\n"
 
