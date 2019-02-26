@@ -23,7 +23,7 @@ class Assembler(MFCBase):
         self.__oldtoken = None
 
         # Two pass assembler.
-        self._pass = 0
+        self._pass = 1
 
         # Default program counter.
         self.pc = 0x0000
@@ -63,7 +63,68 @@ class Assembler(MFCBase):
 
                     # Calculate the operand for this opcode.
                     opcodehex, operand = self.getoperand(sourceline, token.value)
+
+                    # Get the next token
                     token = self.gettoken(sourceline)
+
+                # Check to see if we have label.
+                elif token.type == LexerToken.LABEL:
+
+                    # Get the text of the label.
+                    label = self.__currentstring
+
+                    # Get the next token.
+                    token = self.gettoken(sourceline)
+
+                    # Check to see if this is assignment.
+                    if token == LexerToken.EQUAL:
+
+                        # Fetch the value.
+                        value = self.parseterm(sourceline, 0, 65535)
+
+                        # Check to see if we found a value.
+                        if value is not None:
+
+                            # Assign the value to the label.
+                            self.__labels[label] = value
+
+                        else:
+
+                            # Assign the current address to label.
+                            self.__labels[label] = self.__pc
+
+                    # This is a label with nothing after it on the line
+                    elif token == LexerToken.COLON:
+
+                        # Assign the current address to label.
+                        self.__labels[label] = self.__pc
+
+                        # Get the next token
+                        token = self.gettoken(sourceline)
+
+                    # This is just a label with no colon.
+                    elif token == LexerToken.EOL:
+
+                        # Assign the current address to label.
+                        self.__labels[label] = self.__pc
+
+                # This should be the address into which the program is loaded.
+                elif token == LexerToken.ASTERISK:
+
+                    # Get the next token.
+                    token = self.gettoken(sourceline)
+
+                    # Check to see if this is assignment.
+                    if token == LexerToken.EQUAL:
+
+                        # Fetch the value.
+                        value = self.parseterm(sourceline, 0, 65535)
+
+                        # Check to see if we found a value.
+                        if value is not None:
+
+                            # Assign the value to the label.
+                            self.pc = value
 
                 # Write the data to the file.
                 self.writelinedata(opcodehex, operand)
@@ -290,6 +351,29 @@ class Assembler(MFCBase):
             # This opcode is taking the accumulator as the operand.
             operand = None
             opcodehex = self.opcodes[opcode]['ACC']
+
+        # Check to see if we have a label as the operand.
+        elif token.type == LexerToken.LABEL:
+
+            # Change the type (for processing in next block).
+            token.type = LexerToken.INTEGER
+
+            # Check to see if we have this label already in symbol table.
+            if self.__currentstring in self.__labels:
+
+                # Assign the value to the label.
+                token.value = self.__labels[self.__currentstring]
+
+            # If this is the first pass, assign dummy value.
+            elif self._pass == 1:
+
+                # Assign the value.
+                token.value = 0x100
+
+            else:
+
+                # We shouldn't get here unless there is a problem.
+                self.error("Undefined label: " + self.__currentstring)
 
         # If we have an integer, just need to determine between zero page and absolute (including x/y indexing).
         if token.type == LexerToken.INTEGER:
