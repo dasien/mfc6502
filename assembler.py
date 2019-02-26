@@ -23,7 +23,7 @@ class Assembler(MFCBase):
         self.__oldtoken = None
 
         # Two pass assembler.
-        self._pass = 1
+        self.__pass = 0
 
         # Default program counter.
         self.pc = 0x0000
@@ -36,98 +36,113 @@ class Assembler(MFCBase):
 
     def assemble(self):
 
+        # This is a temp counter to hold starting pc position.
+        tmppc = self.pc
+
         # Parse the input file.
         self.parse()
 
-        # Loop through each line.
-        for sourceline in super(Assembler, self).sourcelines:
+        # Perform two pass assembly.
+        for self.__pass in (1,2):
 
-            # The values that will be printed.
-            opcodehex = 0
-            operand = 0
+            # Reset the program counter.
+            self.pc = tmppc
 
-            # Reset line position counter.
-            self.__linepos = 0
+            # Loop through each line.
+            for sourceline in super(Assembler, self).sourcelines:
 
-            # Get the current token.
-            token = self.gettoken(sourceline)
+                # The values that will be printed.
+                opcodehex = 0
+                operand = 0
 
-            # Loop through each character in the line.
-            while token.type != LexerToken.EOL:
+                # Reset line position counter.
+                self.__linepos = 0
 
-                # print the token type.
-                print("Found token type: %s with value %s" % (token.type, token.value))
+                # Get the current token.
+                token = self.gettoken(sourceline)
 
-                # Check to see if we have an opcode.
-                if token.type == LexerToken.OPCODE:
+                # Loop through each character in the line.
+                while token.type != LexerToken.EOL:
 
-                    # Calculate the operand for this opcode.
-                    opcodehex, operand = self.getoperand(sourceline, token.value)
+                    # print the token type.
+                    print("Found token type: %s with value %s" % (token.type, token.value))
 
-                    # Get the next token
-                    token = self.gettoken(sourceline)
+                    # Check to see if we have an opcode.
+                    if token.type == LexerToken.OPCODE:
 
-                # Check to see if we have label.
-                elif token.type == LexerToken.LABEL:
+                        # Calculate the operand for this opcode.
+                        opcodehex, operand, length = self.getoperand(sourceline, token.value, tmppc)
 
-                    # Get the text of the label.
-                    label = self.__currentstring
-
-                    # Get the next token.
-                    token = self.gettoken(sourceline)
-
-                    # Check to see if this is assignment.
-                    if token == LexerToken.EQUAL:
-
-                        # Fetch the value.
-                        value = self.parseterm(sourceline, 0, 65535)
-
-                        # Check to see if we found a value.
-                        if value is not None:
-
-                            # Assign the value to the label.
-                            self.__labels[label] = value
-
-                        else:
-
-                            # Assign the current address to label.
-                            self.__labels[label] = self.__pc
-
-                    # This is a label with nothing after it on the line
-                    elif token == LexerToken.COLON:
-
-                        # Assign the current address to label.
-                        self.__labels[label] = self.__pc
+                        # Increment the program counter based on operand.
+                        self.pc += length
 
                         # Get the next token
                         token = self.gettoken(sourceline)
 
-                    # This is just a label with no colon.
-                    elif token == LexerToken.EOL:
+                    # Check to see if we have label.
+                    elif token.type == LexerToken.LABEL:
 
-                        # Assign the current address to label.
-                        self.__labels[label] = self.__pc
+                        # Get the text of the label.
+                        label = self.__currentstring
 
-                # This should be the address into which the program is loaded.
-                elif token == LexerToken.ASTERISK:
+                        # Get the next token.
+                        token = self.gettoken(sourceline)
 
-                    # Get the next token.
-                    token = self.gettoken(sourceline)
+                        # Check to see if this is assignment.
+                        if token.type == LexerToken.EQUAL:
 
-                    # Check to see if this is assignment.
-                    if token == LexerToken.EQUAL:
+                            # Fetch the value.
+                            value = self.parseterm(sourceline, 0, 65535)
 
-                        # Fetch the value.
-                        value = self.parseterm(sourceline, 0, 65535)
+                            # Check to see if we found a value.
+                            if value is not None:
 
-                        # Check to see if we found a value.
-                        if value is not None:
+                                # Assign the value to the label.
+                                self.__labels[label] = value
 
-                            # Assign the value to the label.
-                            self.pc = value
+                            else:
 
-                # Write the data to the file.
-                self.writelinedata(opcodehex, operand)
+                                # Assign the current address to label.
+                                self.__labels[label] = self.pc
+
+                        # This is a label with nothing after it on the line
+                        elif token.type == LexerToken.COLON:
+
+                            # Assign the current address to label.
+                            self.__labels[label] = self.pc
+
+                            # Get the next token
+                            token = self.gettoken(sourceline)
+
+                        # This is just a label with no colon.
+                        elif token.type == LexerToken.EOL:
+
+                            # Assign the current address to label.
+                            self.__labels[label] = self.pc
+
+                    # This should be the address into which the program is loaded.
+                    elif token == LexerToken.ASTERISK:
+
+                        # Get the next token.
+                        token = self.gettoken(sourceline)
+
+                        # Check to see if this is assignment.
+                        if token == LexerToken.EQUAL:
+
+                            # Fetch the value.
+                            value = self.parseterm(sourceline, 0, 65535)
+
+                            # Check to see if we found a value.
+                            if value is not None:
+
+                                # Assign the value to the label.
+                                self.pc = value
+
+                    # Check to see if we should write data.
+                    if self.__pass == 2:
+
+                        # Write the data to the file.
+                        self.writelinedata(opcodehex, operand)
 
         # Create the lookup table for labels/variables.
         #self.buildsymboltable()
@@ -330,110 +345,171 @@ class Assembler(MFCBase):
 
         return retval
 
-    def getoperand(self, line, opcode):
+    def getoperand(self, line, opcode, origpc):
 
         # Return values.
         opcodehex = 0
         operand = 0
+        length = 0
 
         # Get the next token.
         token = self.gettoken(line)
 
-        # Based on the token, we can determine the base addressing type.
-        if token.type == LexerToken.HASH:
+        # If the command is a branch, handle relative jump translation.
+        if opcode in ["BRL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"]:
 
-            # This is a literal decimal or hex value.
-            operand = self.parseterm(line, -128, 255)
-            opcodehex = self.opcodes[opcode]['IM']
+            # All of these are relative addressing.
+            opcodehex = self.opcodes[opcode]['REL']
 
-        elif token.type == LexerToken.ACC:
+            if token.type == LexerToken.INTEGER:
 
-            # This opcode is taking the accumulator as the operand.
-            operand = None
-            opcodehex = self.opcodes[opcode]['ACC']
+                operand = token.value & 0xFF
 
-        # Check to see if we have a label as the operand.
-        elif token.type == LexerToken.LABEL:
+            elif token.type == LexerToken.LABEL:
 
-            # Change the type (for processing in next block).
-            token.type = LexerToken.INTEGER
+                if self.__currentstring in self.__labels:
+                    token.value = self.__labels[self.__currentstring]
 
-            # Check to see if we have this label already in symbol table.
-            if self.__currentstring in self.__labels:
+                elif self.__pass == 1:
+                    token.value = 0
 
-                # Assign the value to the label.
-                token.value = self.__labels[self.__currentstring]
+                else:
+                    self.error("Undefined label: " + self.__currentstring)
 
-            # If this is the first pass, assign dummy value.
-            elif self._pass == 1:
+                operand = (((token.value - origpc) - (self.pc + 2)) & 0xFF)
 
-                # Assign the value.
-                token.value = 0x100
+        else:
+            # Based on the token, we can determine the base addressing type.
+            if token.type == LexerToken.EOL:
 
-            else:
+                # This is an isntruction that doesn't take an operand.
+                operand = None
+                opcodehex = self.opcodes[opcode]['IMP']
 
-                # We shouldn't get here unless there is a problem.
-                self.error("Undefined label: " + self.__currentstring)
+                # Length is just the one-byte opcode.
+                length = 1
 
-        # If we have an integer, just need to determine between zero page and absolute (including x/y indexing).
-        if token.type == LexerToken.INTEGER:
+            # This indicates immediate mode.
+            elif token.type == LexerToken.HASH:
 
-            # Set the operand value.
-            operand = token.value
+                # This is a literal decimal or hex value.
+                operand = self.parseterm(line, -128, 255)
+                opcodehex = self.opcodes[opcode]['IM']
 
-            # Check to see if this is indexed addressing.
-            if self.gettoken(line) != LexerToken.COMMA:
+                # Length is the one-byte opcode + the one byte jump.
+                length = 2
 
-                # If the operand is less than 256, it is zero page addressing.
-                if token.value <= 0xFF:
+            elif token.type == LexerToken.ACC:
 
-                    # Get the opcode hex value.
-                    opcodehex = self.opcodes[opcode]['ZP']
+                # This opcode is taking the accumulator as the operand.
+                operand = None
+                opcodehex = self.opcodes[opcode]['ACC']
+
+                # Length is just the one-byte opcode.
+                length = 1
+
+            # Check to see if we have a label as the operand.
+            elif token.type == LexerToken.LABEL:
+
+                # Change the type (for processing in next block).
+                token.type = LexerToken.INTEGER
+
+                # Check to see if we have this label already in symbol table.
+                if self.__currentstring in self.__labels:
+
+                    # Assign the value to the label.
+                    token.value = self.__labels[self.__currentstring]
+
+                # If this is the first pass, assign dummy value.
+                elif self.__pass == 1:
+
+                    # Assign the value.
+                    token.value = 0x100
 
                 else:
 
-                    # Get the opcode hex value.
-                    opcodehex = self.opcodes[opcode]['ABS']
-            else:
+                    # We shouldn't get here unless there is a problem.
+                    self.error("Undefined label: " + self.__currentstring)
 
-                # If we saw the comma, need to see if it is X or Y indexed addressing.
-                token = self.gettoken(line)
+            # If we have an integer, just need to determine between zero page and absolute (including x/y indexing).
+            if token.type == LexerToken.INTEGER:
 
-                # X indexing.
-                if token.type == LexerToken.XREG:
+                # Set the operand value.
+                operand = token.value
+
+                # Check to see if this is indexed addressing.
+                if self.gettoken(line) != LexerToken.COMMA:
 
                     # If the operand is less than 256, it is zero page addressing.
                     if token.value <= 0xFF:
 
                         # Get the opcode hex value.
-                        opcodehex = self.opcodes[opcode]['ZPX']
+                        opcodehex = self.opcodes[opcode]['ZP']
+
+                        # Length is the one-byte opcode + the zero page address.
+                        length = 2
 
                     else:
 
                         # Get the opcode hex value.
-                        opcodehex = self.opcodes[opcode]['ABSX']
+                        opcodehex = self.opcodes[opcode]['ABS']
 
-                # Y indexing.
-                elif token.type == LexerToken.YREG:
+                        # Length is the one-byte opcode + the two-byte address.
+                        length = 3
 
-                    # If the operand is less than 256, it is zero page addressing.
-                    if token.value <= 0xFF:
-
-                        # Get the opcode hex value.
-                        opcodehex = self.opcodes[opcode]['ZPY']
-
-                    else:
-
-                        # Get the opcode hex value.
-                        opcodehex = self.opcodes[opcode]['ABSY']
                 else:
 
-                    self.error("Unknown address syntax")
+                    # If we saw the comma, need to see if it is X or Y indexed addressing.
+                    token = self.gettoken(line)
 
-            print("Operand:{0} Opcodehex {1}".format(operand, opcodehex))
+                    # X indexing.
+                    if token.type == LexerToken.XREG:
 
-        # Return the opcode hex and operand.
-        return opcodehex, operand
+                        # If the operand is less than 256, it is zero page addressing.
+                        if token.value <= 0xFF:
+
+                            # Get the opcode hex value.
+                            opcodehex = self.opcodes[opcode]['ZPX']
+
+                            # Length is the one-byte opcode + the one-byte address.
+                            length = 2
+
+                        else:
+
+                            # Get the opcode hex value.
+                            opcodehex = self.opcodes[opcode]['ABSX']
+
+                            # Length is the one-byte opcode + the two-byte address.
+                            length = 3
+
+                    # Y indexing.
+                    elif token.type == LexerToken.YREG:
+
+                        # If the operand is less than 256, it is zero page addressing.
+                        if token.value <= 0xFF:
+
+                            # Get the opcode hex value.
+                            opcodehex = self.opcodes[opcode]['ZPY']
+
+                            # Length is the one-byte opcode + the one-byte address.
+                            length = 2
+
+                        else:
+
+                            # Get the opcode hex value.
+                            opcodehex = self.opcodes[opcode]['ABSY']
+
+                            # Length is the one-byte opcode + the two-byte address.
+                            length = 3
+
+                    else:
+
+                        self.error("Unknown address syntax")
+
+                print("Operand:{0} Opcodehex {1}".format(operand, opcodehex))
+
+        # Return the opcode hex, operand, and pc offset.
+        return opcodehex, operand, length
 
     def parseterm(self, line, minvalue, maxvalue):
 
@@ -597,7 +673,7 @@ class Assembler(MFCBase):
                 # Change the type to numeric.
                 token.type = LexerToken.INTEGER
 
-            elif self._pass == 1:
+            elif self.__pass == 1:
                 value = 0x100
 
             else:
@@ -617,7 +693,7 @@ class Assembler(MFCBase):
         return value if value is None else value * multiplier
 
     def error(self, errmsg):
-        if self._pass == 2:
+        if self.__pass == 2:
             print("PY6502: {0} : error: {1}".format(self.infile, errmsg))
 
     def buildsymboltable(self):
@@ -779,10 +855,6 @@ class Assembler(MFCBase):
             print("Error in command parsing.")
 
     def writelinedata(self, opcodehex, operand):
-        # Handle blank operands.
-        if operand is None:
-            # Make it blank.
-            operand = ""
 
         # Keep running tally of bytes.
         self.incrementbyteswritten(operand)
@@ -790,13 +862,19 @@ class Assembler(MFCBase):
         if self.includecounter:
 
             # Format the ouptut.
-            outline = "{:04x} {:02x} {:02x}".format(self.pc, opcodehex, operand)
+            outline = "{:04x} {:02x}".format(self.pc, opcodehex)
 
         else:
 
             # Format the ouptut.
-            outline = "{:02x} {:02x}".format(opcodehex, operand)
+            outline = "{:02x}".format(opcodehex)
 
+        # Check to see if we have an operand.
+        if operand is not None:
+
+            # Append operand.
+            outline += " {:02x}".format(operand)
+            
         # Write current value for PC and hex for opcode and operand.
         self.writeline(outline)
 
@@ -919,18 +997,22 @@ class Assembler(MFCBase):
         self.pc += offset
 
     def incrementbyteswritten(self, operand):
+
         # Just increment for opcode.
         self.bytecount += 1
 
-        if operand <= 0xFF:
+        # Make sure we have an operand.
+        if operand is not None:
 
-            # Increment for one byte operand.
-            self.bytecount += 1
+            if operand <= 0xFF:
 
-        else:
+                # Increment for one byte operand.
+                self.bytecount += 1
 
-            # Increment for two byte operand.
-            self.bytecount += 2
+            else:
+
+                # Increment for two byte operand.
+                self.bytecount += 2
 
     def gethexvalueandlength(self, opcode, operand):
         # Lookup opcode in table.
