@@ -54,6 +54,7 @@ class Assembler(MFCBase):
                 # The values that will be printed.
                 opcodehex = 0
                 operand = 0
+                length = 0
 
                 # Reset line position counter.
                 self.__linepos = 0
@@ -72,6 +73,12 @@ class Assembler(MFCBase):
 
                         # Calculate the operand for this opcode.
                         opcodehex, operand, length = self.getoperand(sourceline, token.value, tmppc)
+
+                        # Check to see if we should write data.
+                        if self.__pass == 2 and opcodehex is not 0:
+
+                            # Write the data to the file.
+                            self.writelinedata(opcodehex, operand)
 
                         # Increment the program counter based on operand.
                         self.pc += length
@@ -137,12 +144,6 @@ class Assembler(MFCBase):
 
                                 # Assign the value to the label.
                                 self.pc = value
-
-                    # Check to see if we should write data.
-                    if self.__pass == 2 and opcodehex is not 0:
-
-                        # Write the data to the file.
-                        self.writelinedata(opcodehex, operand)
 
         # Create the lookup table for labels/variables.
         #self.buildsymboltable()
@@ -361,6 +362,9 @@ class Assembler(MFCBase):
             # All of these are relative addressing.
             opcodehex = self.opcodes[opcode]['REL']
 
+            # Length is the one-byte opcode + the one byte jump.
+            length = 2
+
             if token.type == LexerToken.INTEGER:
 
                 operand = token.value & 0xFF
@@ -372,6 +376,7 @@ class Assembler(MFCBase):
 
                 elif self.__pass == 1:
                     token.value = 0
+                    length = 0
 
                 else:
                     self.error("Undefined label: " + self.__currentstring)
@@ -396,7 +401,7 @@ class Assembler(MFCBase):
                 operand = self.parseterm(line, -128, 255)
                 opcodehex = self.opcodes[opcode]['IM']
 
-                # Length is the one-byte opcode + the one byte jump.
+                # Length is the one-byte opcode + one byte value.
                 length = 2
 
             elif token.type == LexerToken.ACC:
@@ -425,6 +430,7 @@ class Assembler(MFCBase):
 
                     # Assign the value.
                     token.value = 0x100
+                    length = 0
 
                 else:
 
@@ -862,7 +868,7 @@ class Assembler(MFCBase):
         if self.includecounter:
 
             # Format the ouptut.
-            outline = "{:04x} {:02x} ".format(self.pc, opcodehex)
+            outline = "{:04X} {:02X} ".format(self.pc, opcodehex)
 
         else:
 
@@ -879,7 +885,8 @@ class Assembler(MFCBase):
 
             else:
                 test = "{:04X}".format(operand)
-                test = test[2:] + test[:2]
+                test = test[2:] + " " + test[:2]
+
                 # Append operand.
                 outline += test
 

@@ -31,8 +31,11 @@ class Memory(object):
             # Loop through program.
             for data in sourcelines:
 
+                # Split into parts based on spaces.
+                lineparts = data.split()
+
                 # Loop through data.
-                for value in data:
+                for value in lineparts:
 
                     # Convert to int.
                     intval = int(value, 16)

@@ -23,7 +23,7 @@ parser.add_argument("-o", "--oputfile", action="store", dest="outfile",
 parser.add_argument("-s", "--startaddress", action="store", dest="startaddr", default=None,
                     help="The start address in hex for the program.")
 parser.add_argument("-c", "--counter", action="store_true", dest="counter", default=False,
-                    help="Output counter as part of output file.")
+                    help="Output program counter as part of output file.")
 
 args = parser.parse_args()
 
@@ -105,5 +105,5 @@ except PermissionError:
 except IOError:
     print('Error: Unspecified IO error.')
 
-except ValueError:
-    print('Invalid start address or format or value.')
+#except ValueError:
+#    print('Invalid start address or format or value.')
