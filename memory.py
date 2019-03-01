@@ -20,7 +20,7 @@ class Memory(object):
         # Assign value to memory.
         self._memmap[address] = value
 
-    def load(self, address, sourcelines, includecounter):
+    def load(self, address, sourcelines, counterinfile):
 
         # The memory offset.
         offset = 0
@@ -38,7 +38,7 @@ class Memory(object):
                 for idx, value in enumerate(lineparts):
 
                     # Check to see if we should skip the program counter.
-                    if includecounter is False or idx > 0:
+                    if counterinfile is False or idx > 0:
 
                         # Convert to int.
                         intval = int(value, 16)

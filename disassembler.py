@@ -3,13 +3,13 @@ from mfcbase import MFCBase
 
 class Disassembler(MFCBase):
 
-    def __init__(self, infile, outfile, startaddr, includecounter):
+    def __init__(self, infile, outfile, startaddr, includecounter, counterinfile):
 
         # This variable handles the writing of the start position of file.
         self.__programstartset = False
 
         # Superclass init.
-        super(Disassembler, self).__init__(infile, outfile, startaddr, includecounter)
+        super(Disassembler, self).__init__(infile, outfile, startaddr, includecounter, counterinfile)
 
         # Load the hex values.
         self.loadhexcodes()
@@ -27,33 +27,28 @@ class Disassembler(MFCBase):
         # Loop through file.
         for sourceline in super(Disassembler, self).sourcelines:
 
+            # Split into parts based on spaces.
+            lineparts = sourceline.split()
+
             # Check to see if we have a start address handled.
             if not self.__programstartset:
+
                 # Set the program listing start address (if possible).
-                self.setprogramstartaddress(sourceline)
+                self.setprogramstartaddress(lineparts)
 
                 # Write file header.
-                self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
-                self.writeline("; %s" % self.outfile.name)
-                self.writeline(";")
-                self.writeline("; Disassembled by mfc6502")
-                self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
-                self.writeline("")
+                self.writeheader()
 
-                # Output the program start.
-                self.writeline("*=$" + format(self.pc, '#04'))
-                self.writeline("")
-
-            # Check to see if the user included addresses in the listing.
-            if len(sourceline[0]) == 4:
+            # Check to see if we should skip the program counter.
+            if self.counterinfile:
 
                 # Get the opcode and operand, skipping the hex address.
-                opcode, operand = self.getopcodeandoperand(sourceline, 1)
+                opcode, operand = self.getopcodeandoperand(lineparts, 1)
 
             else:
 
                 # Get the opcode and operand.
-                opcode, operand = self.getopcodeandoperand(sourceline, 0)
+                opcode, operand = self.getopcodeandoperand(lineparts, 0)
 
             # Get command formatter based on operand.
             command = self.opcodes[int(opcode, 16)]
@@ -63,7 +58,6 @@ class Disassembler(MFCBase):
 
     def getopcodeandoperand(self, line, opcodepos):
 
-        opcode = None
         operand = None
 
         # Get the next byte - this is the opcode.
@@ -91,7 +85,7 @@ class Disassembler(MFCBase):
         try:
 
             # Check to see if line starts with a hex address
-            if len(line[0]) == 4:
+            if self.counterinfile:
 
                 # Try to convert
                 intval = int(line[0], 16)
@@ -108,6 +102,20 @@ class Disassembler(MFCBase):
 
     def signextend(self, r):
         return r if r < 0x80 else r - 0x100
+
+    def writeheader(self):
+
+        self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
+        self.writeline("; %s" % self.outfile.name)
+        self.writeline(";")
+        self.writeline("; Disassembled by mfc6502")
+        self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
+        self.writeline("")
+
+        # Output the program start.
+        output = "*=$" + "{:04X}".format(self.pc)
+        self.writeline(output)
+        self.writeline("")
 
     def writelinedata(self, size, value):
         str_out = []

@@ -51,11 +51,6 @@ class Assembler(MFCBase):
             # Loop through each line.
             for sourceline in super(Assembler, self).sourcelines:
 
-                # The values that will be printed.
-                opcodehex = 0
-                operand = 0
-                length = 0
-
                 # Reset line position counter.
                 self.__linepos = 0
 

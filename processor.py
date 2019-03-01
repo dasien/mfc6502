@@ -17,7 +17,7 @@ class Processor(MFCBase):
     z = dump zero page
     """
 
-    def __init__(self, infile, outfile, startaddr, includecounter, verbose):
+    def __init__(self, infile, outfile, startaddr, includecounter, verbose, counterinfile):
 
         # These represent the program counter, a, x, y registers, stack pointer, processor flags, and a cycle counter.
         self.pc = 0x0000
@@ -50,7 +50,7 @@ class Processor(MFCBase):
         self.loadinstructionset()
 
         # Superclass init.
-        super(Processor, self).__init__(infile, outfile, startaddr, includecounter)
+        super(Processor, self).__init__(infile, outfile, startaddr, includecounter, counterinfile)
 
         # Initialize memory (64k).
         self._memory = Memory(self.maxmemory)

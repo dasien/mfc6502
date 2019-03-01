@@ -1,6 +1,6 @@
 class MFCBase(object):
 
-    def __init__(self, infile, outfile, startaddr=None, includecounter=False):
+    def __init__(self, infile, outfile, startaddr=None, includecounter=False, counterinfile=False):
 
         self.__infile = infile
         self.__outfile = outfile
@@ -8,40 +8,12 @@ class MFCBase(object):
         self.__sourcelines = list()
         self.__bytecount = 0
         self.__includecounter = includecounter
+        self.__counterinfile = counterinfile
 
         if not startaddr:
             self.__pc = 0x1000
         else:
             self.__pc = startaddr
-
-    # def splitline(self, line):
-    #
-    #     pos = 0
-    #
-    #     # Trim line to remove tabs, etc.
-    #     line = line.strip()
-    #
-    #     # Convert line to upper case (in case the developer didn't).
-    #     line = line.upper()
-    #
-    #     # Split into parts based on spaces.
-    #     lineparts = line.split()
-    #
-    #     # Loop throught the line part list.
-    #     for part in lineparts:
-    #
-    #         # Check to see if we have an inline comment
-    #         if part[0] == ";":
-    #
-    #             # Remove from this token to the end of line
-    #             del lineparts[pos:len(lineparts)]
-    #             break
-    #
-    #         else:
-    #             # Increment position counter.
-    #             pos += 1
-    #
-    #     return lineparts
 
     def writeline(self, value):
 
@@ -74,15 +46,6 @@ class MFCBase(object):
                     # Skip the line.
                     continue
 
-                # else:
-                #
-                #     # Split the line up into parts.
-                #     lineparts = self.splitline(line)
-                #
-                #     # Loop through the line parts to make sure there are no trailing colons.
-                #     lineparts[0] = lineparts[0].rstrip(':')
-                #
-
                 # Add to source list.
                 self.__sourcelines.append(line)
 
@@ -103,6 +66,10 @@ class MFCBase(object):
     @property
     def includecounter(self):
         return self.__includecounter
+
+    @property
+    def counterinfile(self):
+        return self.__counterinfile
 
     @property
     def pc(self):

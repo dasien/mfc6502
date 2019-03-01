@@ -24,6 +24,8 @@ parser.add_argument("-s", "--startaddress", action="store", dest="startaddr", de
                     help="The start address in hex for the program.")
 parser.add_argument("-c", "--counter", action="store_true", dest="counter", default=False,
                     help="Output program counter as part of output file.")
+parser.add_argument("-p", "--program", action="store_true", dest="program", default=False,
+                    help="Program counter is present in the input file.")
 
 args = parser.parse_args()
 
@@ -69,7 +71,7 @@ try:
                 raise ValueError
 
         # Set up disassembler.
-        handler = Disassembler(infile, outfile, intval, args.counter)
+        handler = Disassembler(infile, outfile, intval, args.counter, args.program)
 
         # Disassemble file.
         handler.disassemble()
@@ -86,7 +88,7 @@ try:
                 raise ValueError
 
         # Set up processor.
-        handler = Processor(infile, outfile, intval, args.counter, args.debug)
+        handler = Processor(infile, outfile, intval, args.counter, args.debug, args.program)
 
         # Execute code.
         handler.run(args.debug)
