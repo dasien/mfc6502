@@ -103,7 +103,7 @@ class Processor(MFCBase):
         self.writeheadermessage()
 
         # Loop through the code that is loaded in memory.
-        while self.pc < self.endaddress and self.nextstep:
+        while self.pc <= self.endaddress and self.nextstep:
 
             # Check to see if we are in free run mode.
             if self.stopbetweensteps:
