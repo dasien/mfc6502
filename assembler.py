@@ -70,7 +70,7 @@ class Assembler(MFCBase):
                         opcodehex, operand, length = self.getoperand(sourceline, token.value, tmppc)
 
                         # Check to see if we should write data.
-                        if self.__pass == 2 and opcodehex is not 0:
+                        if self.__pass == 2:
 
                             # Write the data to the file.
                             self.writelinedata(opcodehex, operand)
