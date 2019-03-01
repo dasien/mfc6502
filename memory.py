@@ -20,7 +20,7 @@ class Memory(object):
         # Assign value to memory.
         self._memmap[address] = value
 
-    def load(self, address, sourcelines):
+    def load(self, address, sourcelines, includecounter):
 
         # The memory offset.
         offset = 0
@@ -35,29 +35,32 @@ class Memory(object):
                 lineparts = data.split()
 
                 # Loop through data.
-                for value in lineparts:
+                for idx, value in enumerate(lineparts):
 
-                    # Convert to int.
-                    intval = int(value, 16)
+                    # Check to see if we should skip the program counter.
+                    if includecounter is False or idx > 0:
 
-                    # Check to make sure we have a valid value.
-                    if value is not None and -1 < intval < 256:
+                        # Convert to int.
+                        intval = int(value, 16)
 
-                        # Check to see if we have overflowed memory.
-                        if address + offset < 65535:
+                        # Check to make sure we have a valid value.
+                        if value is not None and -1 < intval < 256:
 
-                            # Load memory with data.
-                            self._memmap[address + offset] = intval
+                            # Check to see if we have overflowed memory.
+                            if address + offset < 65535:
 
-                            # increment counter.
-                            offset += 1
+                                # Load memory with data.
+                                self._memmap[address + offset] = intval
 
+                                # increment counter.
+                                offset += 1
+
+                            else:
+                                print("ERROR: Memory overflow.")
+                                break
                         else:
-                            print("ERROR: Memory overflow.")
+                            print("ERROR: Invalid value at address 0x" + str(self._memmap[address + offset]))
                             break
-                    else:
-                        print("ERROR: Invalid value at address 0x" + str(self._memmap[address + offset]))
-                        break
         else:
             print("ERROR: Invalid starting address 0x" + str(address))
 

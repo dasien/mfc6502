@@ -208,7 +208,7 @@ class Processor(MFCBase):
     def loadmemory(self, startaddress, data):
 
         # Load the data into memory.
-        return self._memory.load(startaddress, data)
+        return self._memory.load(startaddress, data, self.includecounter)
 
     # endregion
 
