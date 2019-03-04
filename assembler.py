@@ -179,7 +179,7 @@ class Assembler(MFCBase):
                 currentchar = line[self.__linepos]
 
                 # Check to see if this is a whitespace char.
-                while currentchar.isspace():
+                while currentchar.isspace() or currentchar == '\t':
 
                     # Advance pointer.
                     self.__linepos += 1
@@ -259,6 +259,15 @@ class Assembler(MFCBase):
 
                     # String buffer.
                     tmpstr = []
+
+                    # Append the dot.
+                    tmpstr.append(currentchar)
+
+                    # Increment counter to get to next character.
+                    self.__linepos += 1
+
+                    # Get the next character.
+                    currentchar = line[self.__linepos]
 
                     # Collect all consecutive chars.
                     while currentchar.isalnum():
@@ -370,7 +379,7 @@ class Assembler(MFCBase):
                 retval = (retval * base) + ord(currentchar) - 48
 
             # Check to see if this is a hex digit.
-            elif 'A' >= currentchar <= 'F' and base == 16:
+            elif 'A' <= currentchar <= 'F' and base == 16:
 
                 # Calculate base 16 value of ASCII character (65 is ASCII A)
                 retval = (retval * base) + (ord(currentchar) - 65) + 10
@@ -810,7 +819,7 @@ class Assembler(MFCBase):
         while token.type != LexerToken.EOL:
 
             # Check to see that we have what we want.
-            if token.type == LexerToken.INTEGER and token.value > 0:
+            if token.type == LexerToken.INTEGER:
 
                 # Write this byte to the file.
                 self.writelinedata(token.value, None)
@@ -818,12 +827,15 @@ class Assembler(MFCBase):
                 # Increment program counter.
                 self.pc += 1
 
+                # Advance token pointer.
+                token = self.gettoken(sourceline)
+
             # Check to see if this is a separator.
             elif token.type == LexerToken.COMMA:
 
                 # Advance token pointer.
                 token = self.gettoken(sourceline)
-
+            
     def handleascii(self, sourceline):
 
         # Flag for closing quote of string.
@@ -895,15 +907,15 @@ class Assembler(MFCBase):
 
     def loadpesudoops(self):
         self.__pesudoops = {
-            '.org': self.handlestart,
+            '.ORG': self.handlestart,
             '*=': self.handlestart,
-            '.byte': self.handlebyte,
-            '.db': self.handlebyte,
-            '.ascii': self.handleascii,
-            '.tx': self.handleascii,
-            '.word': self.handleword,
-            '.dw': self.handleword,
-            '.end': self.handleend,
+            '.BYTE': self.handlebyte,
+            '.DB': self.handlebyte,
+            '.ASCII': self.handleascii,
+            '.TX': self.handleascii,
+            '.WORD': self.handleword,
+            '.DW': self.handleword,
+            '.END': self.handleend,
         }
 
     def loadopcodes(self):

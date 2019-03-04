@@ -1,3 +1,6 @@
+import re
+
+
 class MFCBase(object):
 
     def __init__(self, infile, outfile, startaddr=None, includecounter=False, counterinfile=False):
@@ -39,6 +42,9 @@ class MFCBase(object):
 
                 # Convert line to upper case (in case the developer didn't).
                 line = line.upper()
+
+                # Convert tabs to spaces.
+                line = re.sub("\t", " ", line)
 
                 # Check to see if this is a blank line.
                 if not line.strip() or line[0] in ";":
