@@ -1,8 +1,7 @@
 from mfcbase import MFCBase
 from lexertoken import LexerToken
-import struct
 
-# TODO: Need to remove all the file position parsing in favor of tokens.
+
 class Assembler(MFCBase):
 
     def __init__(self, infile, outfile, startaddr=None, includecounter=False):
@@ -10,8 +9,8 @@ class Assembler(MFCBase):
         # Labels are supported.
         self.__labels = dict()
 
-        # So are directives.
-        self.__directives = dict()
+        # So are pseudo-ops.
+        self.__pesudoops = dict()
 
         # Pointer to current character in file.
         self.__linepos = 0
@@ -31,8 +30,9 @@ class Assembler(MFCBase):
         # Superclass init.
         super(Assembler, self).__init__(infile, outfile, startaddr, includecounter)
 
-        # Load opcode table.
+        # Load opcode & pseudo op tables.
         self.loadopcodes()
+        self.loadpesudoops()
 
     def assemble(self):
 
@@ -43,7 +43,7 @@ class Assembler(MFCBase):
         self.parse()
 
         # Perform two pass assembly.
-        for self.__pass in (1,2):
+        for self.__pass in (1, 2):
 
             # Reset the program counter.
             self.pc = tmppc
@@ -77,6 +77,18 @@ class Assembler(MFCBase):
 
                         # Increment the program counter based on operand.
                         self.pc += length
+
+                        # Get the next token
+                        token = self.gettoken(sourceline)
+
+                    # Check to see if we have a pseudo-op.
+                    elif token.type == LexerToken.PSEUDO:
+
+                        # Get the method associated with this pseudo-op.
+                        pseudo = self.__pesudoops[token.value]
+
+                        # Execute the instruction.
+                        pseudo(sourceline)
 
                         # Get the next token
                         token = self.gettoken(sourceline)
@@ -174,6 +186,7 @@ class Assembler(MFCBase):
 
                     # Check to see if we are at the end of the line.
                     if self.__linepos >= len(line):
+
                         # Set token type.
                         retval.type = LexerToken.EOL
 
@@ -236,6 +249,41 @@ class Assembler(MFCBase):
                 # Close bracket.
                 elif currentchar == ']':
                     retval.type = LexerToken.RSQUARE
+
+                # Quoted string.
+                elif currentchar == '"':
+                    retval.type = LexerToken.QUOTE
+
+                # Start of a pseudo-op
+                elif currentchar == '.':
+
+                    # String buffer.
+                    tmpstr = []
+
+                    # Collect all consecutive chars.
+                    while currentchar.isalnum():
+
+                        # Append the current char.
+                        tmpstr.append(currentchar)
+
+                        # Increment pointer.
+                        self.__linepos += 1
+
+                        # Check to see if we are at the end of the line.
+                        if self.__linepos == len(line):
+                            break
+
+                        # Append next char.
+                        currentchar = line[self.__linepos]
+
+                    # Concat string.
+                    self.__currentstring = ''.join(tmpstr)
+
+                    # Check to see if we have an instruction.
+                    if self.__currentstring in self.__pesudoops:
+
+                        retval.value = self.__currentstring
+                        retval.type = LexerToken.PSEUDO
 
                 # Start of hex number.
                 elif currentchar == '$':
@@ -724,38 +772,6 @@ class Assembler(MFCBase):
         # Write current value for PC and hex for opcode and operand.
         self.writeline(outline)
 
-    def setprogramcounter(self, line):
-        # Return value.
-        retval = False
-        val = "0"
-
-        # Chect to see if the line begins with PC identifier.
-        if line[0:3] == "*=$":
-            val = line[3:]
-            retval = True
-
-        # Handle the .ORG directive.
-        elif line[0] == ".ORG":
-            val = line[1][1:]
-            retval = True
-
-        if retval:
-
-            try:
-                intval = int(val)
-
-                if intval < 1 or intval > 65535:
-                    raise ValueError
-
-                else:
-                    # Set the counter.
-                    self.pc = intval
-
-            except ValueError:
-                print('Invalid address or format for program counter.')
-
-        return retval
-
     def incrementbyteswritten(self, operand):
 
         # Just increment for opcode.
@@ -774,37 +790,120 @@ class Assembler(MFCBase):
                 # Increment for two byte operand.
                 self.bytecount += 2
 
-    def handleStart(self):
+    def handlestart(self, sourceline):
+
+        # Get the address token.
+        token = self.gettoken(sourceline)
+
+        # Check to see that we have what we want.
+        if token.type == LexerToken.INTEGER and token.value > 0:
+
+            # Assign the program counter.
+            self.pc = token.value
+
+    def handlebyte(self, sourceline):
+
+        # Get the address token.
+        token = self.gettoken(sourceline)
+
+        # Loop through data.
+        while token.type != LexerToken.EOL:
+
+            # Check to see that we have what we want.
+            if token.type == LexerToken.INTEGER and token.value > 0:
+
+                # Write this byte to the file.
+                self.writelinedata(token.value, None)
+
+                # Increment program counter.
+                self.pc += 1
+
+            # Check to see if this is a separator.
+            elif token.type == LexerToken.COMMA:
+
+                # Advance token pointer.
+                token = self.gettoken(sourceline)
+
+    def handleascii(self, sourceline):
+
+        # Flag for closing quote of string.
+        closequote = False
+
+        # Get the next token.
+        token = self.gettoken(sourceline)
+
+        # Loop through data.
+        while token.type != LexerToken.EOL:
+
+            # Need the first quote.
+            if token.type == LexerToken.QUOTE and not closequote:
+
+                # Flip flag - next quote will be a close.
+                closequote = True
+
+                # Get the next token.
+                token = self.gettoken(sourceline)
+
+                # Loop through the string.
+                for letter in token.value:
+
+                    # Write this byte to the file.
+                    self.writelinedata(ord(letter), None)
+
+                    # Increment program counter.
+                    self.pc += 1
+
+            # Check to see if this is a separator.
+            elif token.type == LexerToken.COMMA:
+
+                # Flip flag - next quote will be an open.
+                closequote = False
+
+            # Advance token pointer.
+            token = self.gettoken(sourceline)
+
+        # Error check to see if user closed the quote.
+        if not closequote:
+            self.error("String not closed properly.")
+
+    def handleword(self, sourceline):
+
+        # Get the address token.
+        token = self.gettoken(sourceline)
+
+        # Loop through data.
+        while token.type != LexerToken.EOL:
+
+            # Check to see that we have what we want.
+            if token.type == LexerToken.INTEGER and token.value > 0:
+
+                # Write these bytes to the file in little endian.
+                self.writelinedata((token.value & 0xFF), None)
+                self.writelinedata((token.value >> 8) & 0xFF, None)
+
+                # Increment program counter.
+                self.pc += 2
+
+            # Check to see if this is a separator.
+            elif token.type == LexerToken.COMMA:
+
+                # Advance token pointer.
+                token = self.gettoken(sourceline)
+
+    def handleend(self):
         pass
 
-    def handleByte(self):
-        pass
-
-    def handleASCII(self):
-        pass
-
-    def handleWord(self):
-        pass
-
-    def handleEnd(self):
-        pass
-
-    def loaddirectives(self):
-        self.__directives = {
-            '.org': self.handleStart,
-            'org': self.handleStart,
-            '*=': self.handleStart,
-            '.byte': self.handleByte,
-            '.db': self.handleByte,
-            'db': self.handleByte,
-            '.ascii': self.handleASCII,
-            '.tx': self.handleASCII,
-            'tx': self.handleASCII,
-            '.word': self.handleWord,
-            '.dw': self.handleWord,
-            'dw': self.handleWord,
-            '.end': self.handleEnd,
-            'end': self.handleEnd
+    def loadpesudoops(self):
+        self.__pesudoops = {
+            '.org': self.handlestart,
+            '*=': self.handlestart,
+            '.byte': self.handlebyte,
+            '.db': self.handlebyte,
+            '.ascii': self.handleascii,
+            '.tx': self.handleascii,
+            '.word': self.handleword,
+            '.dw': self.handleword,
+            '.end': self.handleend,
         }
 
     def loadopcodes(self):
