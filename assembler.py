@@ -125,6 +125,12 @@ class Assembler(MFCBase):
                             # Get the next token
                             token = self.gettoken(sourceline)
 
+                        # This is a label with a pseudo-op after it.
+                        elif token.type == LexerToken.PSEUDO:
+
+                            # Assign the current address to label.
+                            self.__labels[label] = self.pc
+
                         # This is just a label with no colon.
                         elif token.type == LexerToken.EOL:
 
