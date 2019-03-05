@@ -835,7 +835,16 @@ class Assembler(MFCBase):
 
                 # Advance token pointer.
                 token = self.gettoken(sourceline)
-            
+
+            # Check to see if this is a quote (byte can be used for strings as well).
+            elif token.type == LexerToken.QUOTE:
+
+                # Put the token back.
+                self.__oldtoken = token
+
+                # Call ascii handler.
+                self.handleascii(sourceline)
+
     def handleascii(self, sourceline):
 
         # Flag for closing quote of string.
