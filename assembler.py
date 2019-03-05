@@ -111,6 +111,9 @@ class Assembler(MFCBase):
                                 # Assign the value to the label.
                                 self.__labels[label] = value
 
+                                # Get the next token.
+                                token = self.gettoken(sourceline)
+
                             else:
 
                                 # Assign the current address to label.
@@ -138,13 +141,13 @@ class Assembler(MFCBase):
                             self.__labels[label] = self.pc
 
                     # This should be the address into which the program is loaded.
-                    elif token == LexerToken.ASTERISK:
+                    elif token.type == LexerToken.ASTERISK:
 
                         # Get the next token.
                         token = self.gettoken(sourceline)
 
                         # Check to see if this is assignment.
-                        if token == LexerToken.EQUAL:
+                        if token.type == LexerToken.EQUAL:
 
                             # Fetch the value.
                             value = self.parseterm(sourceline, 0, 65535)
@@ -154,6 +157,9 @@ class Assembler(MFCBase):
 
                                 # Assign the value to the label.
                                 self.pc = value
+
+                                # Get the next token.
+                                token = self.gettoken(sourceline)
 
     def gettoken(self, line):
 
@@ -406,7 +412,7 @@ class Assembler(MFCBase):
         token = self.gettoken(line)
 
         # If the command is a branch, handle relative jump translation.
-        if opcode in ["BRL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"]:
+        if opcode in ["BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"]:
 
             # All of these are relative addressing.
             opcodehex = self.opcodes[opcode]['REL']
@@ -666,6 +672,15 @@ class Assembler(MFCBase):
 
             # Set value to program counter.
             value = self.pc
+
+        # They are passing a character in as operand.
+        elif token.type == LexerToken.QUOTE:
+
+            # Get the character.
+            token = self.gettoken(line)
+
+            # Set the value.
+            value = ord(token.value)
 
         elif token.type == LexerToken.LSQUARE:
 
