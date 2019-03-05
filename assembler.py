@@ -69,11 +69,8 @@ class Assembler(MFCBase):
                         # Calculate the operand for this opcode.
                         opcodehex, operand, length = self.getoperand(sourceline, token.value, tmppc)
 
-                        # Check to see if we should write data.
-                        if self.__pass == 2:
-
-                            # Write the data to the file.
-                            self.writelinedata(opcodehex, operand)
+                        # Write the data to the file.
+                        self.writelinedata(opcodehex, operand)
 
                         # Increment the program counter based on operand.
                         self.pc += length
@@ -750,36 +747,39 @@ class Assembler(MFCBase):
 
     def writelinedata(self, opcodehex, operand):
 
-        # Keep running tally of bytes.
-        self.incrementbyteswritten(operand)
+        # Check to see if we should be printing.
+        if self.__pass == 2:
 
-        if self.includecounter:
+            # Keep running tally of bytes.
+            self.incrementbyteswritten(operand)
 
-            # Format the ouptut.
-            outline = "{:04X} {:02X} ".format(self.pc, opcodehex)
+            if self.includecounter:
 
-        else:
-
-            # Format the ouptut.
-            outline = "{:02X} ".format(opcodehex)
-
-        # Check to see if we have an operand.
-        if operand is not None:
-
-            if operand < 256:
-
-                # Append operand.
-                outline += "{:02X}".format(operand)
+                # Format the ouptut.
+                outline = "{:04X} {:02X} ".format(self.pc, opcodehex)
 
             else:
-                test = "{:04X}".format(operand)
-                test = test[2:] + " " + test[:2]
 
-                # Append operand.
-                outline += test
+                # Format the ouptut.
+                outline = "{:02X} ".format(opcodehex)
 
-        # Write current value for PC and hex for opcode and operand.
-        self.writeline(outline)
+            # Check to see if we have an operand.
+            if operand is not None:
+
+                if operand < 256:
+
+                    # Append operand.
+                    outline += "{:02X}".format(operand)
+
+                else:
+                    test = "{:04X}".format(operand)
+                    test = test[2:] + " " + test[:2]
+
+                    # Append operand.
+                    outline += test
+
+            # Write current value for PC and hex for opcode and operand.
+            self.writeline(outline)
 
     def incrementbyteswritten(self, operand):
 
@@ -844,6 +844,9 @@ class Assembler(MFCBase):
 
                 # Call ascii handler.
                 self.handleascii(sourceline)
+
+                # Advance token pointer.
+                token = self.gettoken(sourceline)
 
     def handleascii(self, sourceline):
 
