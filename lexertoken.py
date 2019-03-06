@@ -26,6 +26,7 @@ class LexerToken(object):
     LSQUARE = 22
     RSQUARE = 23
     QUOTE = 24
+    OTHER = 25
 
     def __init__(self, type= None, value=None):
 

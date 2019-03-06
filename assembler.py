@@ -134,6 +134,12 @@ class Assembler(MFCBase):
                             # Assign the current address to label.
                             self.__labels[label] = self.pc
 
+                        # This is a label with a opcode after it.
+                        elif token.type == LexerToken.OPCODE:
+
+                            # Assign the current address to label.
+                            self.__labels[label] = self.pc
+
                         # This is just a label with no colon.
                         elif token.type == LexerToken.EOL:
 
@@ -160,6 +166,10 @@ class Assembler(MFCBase):
 
                                 # Get the next token.
                                 token = self.gettoken(sourceline)
+                    else:
+
+                        # Unexpected type. Just get the next token.
+                        token = self.gettoken(sourceline)
 
     def gettoken(self, line):
 
@@ -206,62 +216,77 @@ class Assembler(MFCBase):
                 if currentchar == ';':
                     self.__linepos = len(line)
                     retval.type = LexerToken.EOL
+                    retval.value = currentchar
 
                 # Literal integer value.
                 elif currentchar == '#':
                     retval.type = LexerToken.HASH
+                    retval.value = currentchar
 
                 # Indirect/Indexed.
                 elif currentchar == '(':
                     retval.type = LexerToken.LPAREN
+                    retval.value = currentchar
 
                 # Indirect/Indexed.
                 elif currentchar == ')':
                     retval.type = LexerToken.RPAREN
+                    retval.value = currentchar
 
                 # Separator for data list or indirect/indexed.
                 elif currentchar == ',':
                     retval.type = LexerToken.COMMA
+                    retval.value = currentchar
 
                 # Expression/Address adjustment.
                 elif currentchar == '+':
                     retval.type = LexerToken.PLUS
+                    retval.value = currentchar
 
                 # Expression/Address adjustment
                 elif currentchar == '-':
                     retval.type = LexerToken.MINUS
+                    retval.value = currentchar
 
                 # Assignment.
                 elif currentchar == '=':
                     retval.type = LexerToken.EQUAL
+                    retval.value = currentchar
 
                 # Program counter.
                 elif currentchar == '*':
                     retval.type = LexerToken.ASTERISK
+                    retval.value = currentchar
 
                 # Label ending (sometimes).
                 elif currentchar == ':':
                     retval.type = LexerToken.COLON
+                    retval.value = currentchar
 
                 # High byte notation.
                 elif currentchar == '<':
                     retval.type = LexerToken.LANGLE
+                    retval.value = currentchar
 
                 # Low byte notation.
                 elif currentchar == '>':
                     retval.type = LexerToken.RANGLE
+                    retval.value = currentchar
 
                 # Square bracket.
                 elif currentchar == '[':
                     retval.type = LexerToken.LSQUARE
+                    retval.value = currentchar
 
                 # Close bracket.
                 elif currentchar == ']':
                     retval.type = LexerToken.RSQUARE
+                    retval.value = currentchar
 
                 # Quoted string.
                 elif currentchar == '"':
                     retval.type = LexerToken.QUOTE
+                    retval.value = currentchar
 
                 # Start of a pseudo-op
                 elif currentchar == '.':
@@ -303,6 +328,12 @@ class Assembler(MFCBase):
                         retval.value = self.__currentstring
                         retval.type = LexerToken.PSEUDO
 
+                    else:
+
+                        # Just make it a string.
+                        retval.value = self.__currentstring
+                        retval.type = LexerToken.STRING
+
                 # Start of hex number.
                 elif currentchar == '$':
 
@@ -325,7 +356,7 @@ class Assembler(MFCBase):
                     tmpstr = []
 
                     # Collect all consecutive chars.
-                    while currentchar.isalnum():
+                    while currentchar.isalnum() or currentchar == '_':
 
                         # Append the current char.
                         tmpstr.append(currentchar)
@@ -364,6 +395,11 @@ class Assembler(MFCBase):
                     else:
                         retval.value = self.__currentstring
                         retval.type = LexerToken.LABEL
+
+                # Handle any other character.
+                else:
+                    retval.value = currentchar
+                    retval.type = LexerToken.OTHER
 
             # Increment counter.
             self.__linepos += 1
@@ -444,7 +480,17 @@ class Assembler(MFCBase):
 
                 # This is an isntruction that doesn't take an operand.
                 operand = None
-                opcodehex = self.opcodes[opcode]['IMP']
+
+                # Check to see if this is an opcode where no operand means accumulator.
+                if opcode in ["ASL", "LSR", "ROL", "ROR"]:
+
+                    # Use accumulator addressing.
+                    opcodehex = self.opcodes[opcode]['ACC']
+
+                else:
+
+                    # Use implied addresing.
+                    opcodehex = self.opcodes[opcode]['IMP']
 
                 # Length is just the one-byte opcode.
                 length = 1
@@ -676,11 +722,8 @@ class Assembler(MFCBase):
         # They are passing a character in as operand.
         elif token.type == LexerToken.QUOTE:
 
-            # Get the character.
+            # Get the next character.
             token = self.gettoken(line)
-
-            # Set the value.
-            value = ord(token.value)
 
         elif token.type == LexerToken.LSQUARE:
 
@@ -755,6 +798,9 @@ class Assembler(MFCBase):
 
         elif token.type == LexerToken.STRING and len(self.__currentstring) == 1:
             value = ord(self.__currentstring[0])
+
+        elif token.type == LexerToken.OTHER:
+            value = ord(token.value)
 
         else:
             self.error("Value expected")
@@ -886,17 +932,36 @@ class Assembler(MFCBase):
                 # Flip flag - next quote will be a close.
                 closequote = True
 
-                # Get the next token.
-                token = self.gettoken(sourceline)
+                # Get the next character.
+                currentchar = sourceline[self.__linepos]
 
-                # Loop through the string.
-                for letter in token.value:
+                # String buffer.
+                tmpstr = []
+
+                # Collect all consecutive chars.
+                while currentchar != '"':
 
                     # Write this byte to the file.
-                    self.writelinedata(ord(letter), None)
+                    self.writelinedata(ord(currentchar), None)
 
                     # Increment program counter.
                     self.pc += 1
+
+                    # Append the current char.
+                    tmpstr.append(currentchar)
+
+                    # Increment pointer.
+                    self.__linepos += 1
+
+                    # Check to see if we are at the end of the line.
+                    if self.__linepos == len(sourceline):
+                        break
+
+                    # Append next char.
+                    currentchar = sourceline[self.__linepos]
+
+                # Concat string.
+                token.value = ''.join(tmpstr)
 
             # Check to see if this is a separator.
             elif token.type == LexerToken.COMMA:
@@ -989,7 +1054,7 @@ class Assembler(MFCBase):
                     'INDY': 0xB1},
             'LDX': {'IM': 0xA2, 'ZP': 0xA6, 'ZPY': 0xB6, 'ABS': 0xAE, 'ABSY': 0xBE},
             'LDY': {'IM': 0xA0, 'ZP': 0xA4, 'ZPX': 0xB4, 'ABS': 0xAC, 'ABSX': 0xBC},
-            'LSR': {'ZP': 0x46, 'ZPX': 0x56, 'ABS': 0x4E, 'ABSX': 0x5E},
+            'LSR': {'ZP': 0x46, 'ZPX': 0x56, 'ABS': 0x4E, 'ABSX': 0x5E, 'ACC': 0x4A},
             'NOP': {'IMP': 0xEA},
             'ORA': {'IM': 0x09, 'ZP': 0x05, 'ZPX': 0x15, 'ABS': 0x0D, 'ABSX': 0x1D, 'ABSY': 0x19, 'INDX': 0x01,
                     'INDY': 0x11},

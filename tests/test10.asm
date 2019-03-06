@@ -72,6 +72,7 @@ temp    =       $FC
 		LDA     #$00		; REVERSE TOGGLE
 		STA     REV
                 JSR     Init_6551
+
 CHESS		CLD			; INITIALIZE
 		LDX	#$FF		; TWO STACKS
 		TXS
@@ -767,7 +768,7 @@ POUT9      	LDA   	#$0D
                 RTS
 
 pout10		ldx   	#$00		; print the column labels
-POUT11		lda	#$20		; 00 01 02 03 ... 07 
+POUT11		lda	#$20		; 00 01 02 03 ... 07
 		jsr   	syschout
 		txa
 		jsr	syshexout
