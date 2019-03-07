@@ -1079,6 +1079,10 @@ class Assembler(MFCBase):
             'PLA': {'IMP': 0x68},
             'PHP': {'IMP': 0x08},
             'PLP': {'IMP': 0x28},
+            'PHX': {'IMP': 0xDA},
+            'PLX': {'IMP': 0xFA},
+            'PHY': {'IMP': 0x5A},
+            'PLY': {'IMP': 0x7A},
             'STX': {'ZP': 0x86, 'ZPY': 0x96, 'ABS': 0x8E},
             'STY': {'ZP': 0x84, 'ZPX': 0x94, 'ABS': 0x8C}
         }

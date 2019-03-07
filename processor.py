@@ -1765,6 +1765,28 @@ class Processor(MFCBase):
 
     # endregion
 
+    # region PHX
+    def handlePHX(self):
+
+        # Push the x register onto the stack.
+        self.pushstack8(self.x)
+
+        # Update cycle counter.
+        self.cy += 3
+
+    # endregion
+
+    # region PHY
+    def handlePHY(self):
+
+        # Push the y register onto the stack.
+        self.pushstack8(self.y)
+
+        # Update cycle counter.
+        self.cy += 3
+
+    # endregion
+
     # region PLA
     def handlePLA(self):
 
@@ -1785,6 +1807,36 @@ class Processor(MFCBase):
 
         # Set processor flags from stack value.
         self.pf = self.popstack8()
+
+    # endregion
+
+    # region PLX
+    def handlePLX(self):
+
+        # Pop the value of the stack pointer to the x register.
+        self.x = self.popstack8()
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.x == 0))
+        self.setflag(Flags.NEGATIVE, (self.x & 0x80))
+
+        # Update cycle counter.
+        self.cy += 4
+
+    # endregion
+
+    # region PLY
+    def handlePLA(self):
+
+        # Pop the value of the stack pointer to the y register.
+        self.y = self.popstack8()
+
+        # Update flags.
+        self.setflag(Flags.ZERO, (self.y == 0))
+        self.setflag(Flags.NEGATIVE, (self.y & 0x80))
+
+        # Update cycle counter.
+        self.cy += 4
 
     # endregion
 
@@ -2361,6 +2413,7 @@ class Processor(MFCBase):
             0x56: self.handleLSRzeropagex,
             0x58: self.handleCLI,
             0x59: self.handleEORabsolutey,
+            0x5A: self.handlePHY,
             0x5D: self.handleEORabsolutex,
             0x5E: self.handleLSRabsolutex,
             0x60: self.handleRTS,
@@ -2379,6 +2432,7 @@ class Processor(MFCBase):
             0x76: self.handleRORzeropagex,
             0x78: self.handleSEI,
             0x79: self.handleADCabsolutey,
+            0x7A: self.handlePLY,
             0x7D: self.handleADCabsolutex,
             0x7E: self.handleRORabsolutex,
             0x81: self.handleSTAindexedindirect,
@@ -2439,6 +2493,7 @@ class Processor(MFCBase):
             0xD6: self.handleDECzeropagex,
             0xD8: self.handleCLD,
             0xD9: self.handleCMPabsolutey,
+            0xDA: self.handlePHX,
             0xDD: self.handleCMPabsolutex,
             0xDE: self.handleDECabsolutex,
             0xE0: self.handleCPXimmediate,
@@ -2458,6 +2513,7 @@ class Processor(MFCBase):
             0xF6: self.handleINCzeropagex,
             0xF8: self.handleSED,
             0xF9: self.handleSBCabsolutey,
+            0xFA: self.handlePLX,
             0xFD: self.handleSBCabsolutex,
             0xFE: self.handleINCabsolutex
         }
