@@ -71,7 +71,7 @@ class Memory(object):
         # Clear out all memory.
         self._memmap = [0] * 65536
 
-    def dump(self, address, length):
+    def dump(self, address, length, verbose=False, output=None):
 
         stringtoprint = []
         factor = 0
@@ -84,8 +84,18 @@ class Memory(object):
 
                 # Check to see if this is a new line.
                 if factor % 16 == 0:
+
                     # Print current row.
                     print(''.join(stringtoprint))
+
+                    # Check to see if we should be logging to file.
+                    if verbose and output is not None:
+
+                        # Append a CR to the line.
+                        stringtoprint += "\n"
+
+                        # Write line to output file.
+                        output.write(stringtoprint)
 
                     # Clear buffer.
                     stringtoprint.clear()
@@ -102,3 +112,12 @@ class Memory(object):
 
             # Print the final row.
             print(''.join(stringtoprint))
+
+            # Check to see if we should be logging to file.
+            if verbose and output is not None:
+
+                # Append a CR to the line.
+                stringtoprint += "\n"
+
+                # Write line to output file.
+                output.write(stringtoprint)

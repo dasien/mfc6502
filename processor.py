@@ -34,7 +34,7 @@ class Processor(MFCBase):
         # The table of opcodes and their execution handlers.
         self.instructions = None
 
-        # TODO: write information to output file.
+        # Flag to indicate logging to file.
         self.verbose = verbose
 
         # The end address of the loaded program.
@@ -117,6 +117,12 @@ class Processor(MFCBase):
                 # Execute the next operation.
                 self.executestep()
 
+        # Check to see if we are in verbose mode.
+        if self.verbose:
+
+            # Write cpu state for final execution.
+            self.showcpustate()
+
         # End message.
         self.writefootermessage()
 
@@ -192,8 +198,16 @@ class Processor(MFCBase):
         str_sp = self.onebytetostring(self.sp & 0xFF)
         str_pf = self.onebytetostring(self.pf)
 
+        # Output to screen.
         print("PC:" + str_pc + " A:" + str_a + " X:" + str_x + " Y:" + str_y + " SP:" + str_sp + " Flags:" + str_pf +
               " CPU Cycles:" + str(self.cy))
+
+        # Check to see if we should be logging to file.
+        if self.verbose:
+
+            # Write to output file.
+            self.writeline("PC:" + str_pc + " A:" + str_a + " X:" + str_x + " Y:" + str_y + " SP:" + str_sp + " Flags:" + str_pf +
+                           " CPU Cycles:" + str(self.cy))
 
     def dumpzeropage(self):
 
@@ -215,14 +229,32 @@ class Processor(MFCBase):
     # region Helper Methods
 
     def writeheadermessage(self):
+
+        # Output to screen.
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
-        print("; Execution Begins: %s" % datetime.now())
+        print("; MFC6502 - Execution Begins: %s" % datetime.now())
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
 
+        if self.verbose:
+
+            # Write output to file.
+            self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
+            self.writeline("; MFC6502 - Execution Begins: %s" % datetime.now())
+            self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
+
     def writefootermessage(self):
+
+        # Output to screen.
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
-        print("; Execution Ends: %s" % datetime.now())
+        print("; MFC6502 - Execution Ends: %s" % datetime.now())
         print(";;;;;;;;;;;;;;;;;;;;;;;;;")
+
+        if self.verbose:
+
+            # Write output to file.
+            self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
+            self.writeline("; MFC6502 - Execution Begins: %s" % datetime.now())
+            self.writeline(";;;;;;;;;;;;;;;;;;;;;;;;;")
 
     def onebytetostring(self, value):
         return "0x%02x" % value
@@ -1826,7 +1858,7 @@ class Processor(MFCBase):
     # endregion
 
     # region PLY
-    def handlePLA(self):
+    def handlePLY(self):
 
         # Pop the value of the stack pointer to the y register.
         self.y = self.popstack8()
